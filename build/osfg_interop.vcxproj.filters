@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\src\interop\d3d11_d3d12_interop.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\src\interop\d3d11_d3d12_interop.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{201C6B60-F9F9-3622-B822-2C347E870A64}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{5A8B6C64-3EF2-3021-8380-BA45A14C6DD7}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

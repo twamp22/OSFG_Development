@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(tree /F /L 3)",
+      "Bash(where:*)",
+      "Bash(cmake --version:*)",
+      "Bash(git --version:*)",
+      "Bash(powershell:*)",
+      "Bash(git clone:*)",
+      "Bash(UpdateMedia.bat)",
+      "Bash(mkdir:*)",
+      "Bash(\"C:\\Program Files\\CMake\\bin\\cmake.exe\" -B build -G \"Visual Studio 17 2022\" -A x64)",
+      "Bash(\"C:\\Program Files\\CMake\\bin\\cmake.exe\" --build \"C:\\Users\\YeaDaddy\\Documents\\GitHub\\OSFG_Development\\build\" --config Release)",
+      "Bash(\"C:\\Program Files\\CMake\\bin\\cmake.exe\" --build \"C:\\Users\\YeaDaddy\\Documents\\GitHub\\OSFG_Development\\build\" --config Release --target osfg_opticalflow)",
+      "Bash(\"C:\\Program Files\\CMake\\bin\\cmake.exe\" --build \"C:\\Users\\YeaDaddy\\Documents\\GitHub\\OSFG_Development\\build\" --config Release --target test_opticalflow)",
+      "Bash(\"C:\\Program Files\\CMake\\bin\\cmake.exe\" --build \"C:\\Users\\YeaDaddy\\Documents\\GitHub\\OSFG_Development\\build\" --config Release --target ffx_backend_dx12)",
+      "Bash(\"C:\\Program Files\\CMake\\bin\\cmake.exe\" --build \"C:\\Users\\YeaDaddy\\Documents\\GitHub\\OSFG_Development\\build\" --config Release --target ffx_opticalflow)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

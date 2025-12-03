@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <ProjectOutputs>
+    <ProjectOutput>
+      <FullPath>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\x64\Release\ZERO_CHECK</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\bin\Release\osfg_demo.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\bin\Release\test_dxgi_capture.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\bin\Release\test_frame_generation.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\bin\Release\test_simple_opticalflow.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\x64\Release\ALL_BUILD</FullPath>
+    </ProjectOutput>
+  </ProjectOutputs>
+  <ContentFiles />
+  <SatelliteDlls />
+  <NonRecipeFileRefs />
+</Project>

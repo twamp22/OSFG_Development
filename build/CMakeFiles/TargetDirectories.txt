@@ -1,0 +1,12 @@
+C:/Users/YeaDaddy/Documents/GitHub/OSFG_Development/build/CMakeFiles/osfg_capture.dir
+C:/Users/YeaDaddy/Documents/GitHub/OSFG_Development/build/CMakeFiles/osfg_simple_opticalflow.dir
+C:/Users/YeaDaddy/Documents/GitHub/OSFG_Development/build/CMakeFiles/osfg_interop.dir
+C:/Users/YeaDaddy/Documents/GitHub/OSFG_Development/build/CMakeFiles/osfg_interpolation.dir
+C:/Users/YeaDaddy/Documents/GitHub/OSFG_Development/build/CMakeFiles/osfg_presentation.dir
+C:/Users/YeaDaddy/Documents/GitHub/OSFG_Development/build/CMakeFiles/test_dxgi_capture.dir
+C:/Users/YeaDaddy/Documents/GitHub/OSFG_Development/build/CMakeFiles/test_simple_opticalflow.dir
+C:/Users/YeaDaddy/Documents/GitHub/OSFG_Development/build/CMakeFiles/test_frame_generation.dir
+C:/Users/YeaDaddy/Documents/GitHub/OSFG_Development/build/CMakeFiles/osfg_demo.dir
+C:/Users/YeaDaddy/Documents/GitHub/OSFG_Development/build/CMakeFiles/INSTALL.dir
+C:/Users/YeaDaddy/Documents/GitHub/OSFG_Development/build/CMakeFiles/ALL_BUILD.dir
+C:/Users/YeaDaddy/Documents/GitHub/OSFG_Development/build/CMakeFiles/ZERO_CHECK.dir

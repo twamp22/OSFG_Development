@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\CMakeFiles\9d33df39b6b13f42611273eb868fdcd9\INSTALL_force.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{6B334ED1-D455-3C74-A79A-B36CC358F485}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
