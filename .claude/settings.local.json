@@ -15,7 +15,8 @@
       "Bash(\"C:\\Program Files\\CMake\\bin\\cmake.exe\" --build \"C:\\Users\\YeaDaddy\\Documents\\GitHub\\OSFG_Development\\build\" --config Release --target osfg_opticalflow)",
       "Bash(\"C:\\Program Files\\CMake\\bin\\cmake.exe\" --build \"C:\\Users\\YeaDaddy\\Documents\\GitHub\\OSFG_Development\\build\" --config Release --target test_opticalflow)",
       "Bash(\"C:\\Program Files\\CMake\\bin\\cmake.exe\" --build \"C:\\Users\\YeaDaddy\\Documents\\GitHub\\OSFG_Development\\build\" --config Release --target ffx_backend_dx12)",
-      "Bash(\"C:\\Program Files\\CMake\\bin\\cmake.exe\" --build \"C:\\Users\\YeaDaddy\\Documents\\GitHub\\OSFG_Development\\build\" --config Release --target ffx_opticalflow)"
+      "Bash(\"C:\\Program Files\\CMake\\bin\\cmake.exe\" --build \"C:\\Users\\YeaDaddy\\Documents\\GitHub\\OSFG_Development\\build\" --config Release --target ffx_opticalflow)",
+      "Bash(tree:*)"
     ],
     "deny": [],
     "ask": []
