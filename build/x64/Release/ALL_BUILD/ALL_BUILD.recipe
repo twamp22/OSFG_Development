@@ -8,10 +8,16 @@
       <FullPath>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\bin\Release\osfg_demo.exe</FullPath>
     </ProjectOutput>
     <ProjectOutput>
+      <FullPath>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\bin\Release\test_dual_gpu_pipeline.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
       <FullPath>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\bin\Release\test_dxgi_capture.exe</FullPath>
     </ProjectOutput>
     <ProjectOutput>
       <FullPath>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\bin\Release\test_frame_generation.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\bin\Release\test_fsr_opticalflow.exe</FullPath>
     </ProjectOutput>
     <ProjectOutput>
       <FullPath>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\bin\Release\test_simple_opticalflow.exe</FullPath>

@@ -4,6 +4,9 @@
     <ClCompile Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\backend\dx12\ffx_dx12.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\backend\dx12\ffx_backends_dx12.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\CMakeLists.txt" />

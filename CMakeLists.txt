@@ -2,7 +2,7 @@
 # CMake Build Configuration
 
 cmake_minimum_required(VERSION 3.20)
-project(OSFG VERSION 0.1.0 LANGUAGES CXX)
+project(OSFG VERSION 0.2.0 LANGUAGES CXX)
 
 # C++ Standard
 set(CMAKE_CXX_STANDARD 17)
@@ -25,6 +25,19 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 # ============================================================================
 set(VCPKG_ROOT "C:/vcpkg")
 set(DIRECTX_HEADERS_INCLUDE ${VCPKG_ROOT}/installed/x64-windows/include)
+
+# ============================================================================
+# FidelityFX SDK Paths
+# ============================================================================
+set(FFX_SDK_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/external/FidelityFX-SDK")
+set(FFX_INCLUDE_DIRS
+    ${FFX_SDK_ROOT}/Kits/FidelityFX/api/include
+    ${FFX_SDK_ROOT}/Kits/FidelityFX/api/internal
+    ${FFX_SDK_ROOT}/Kits/FidelityFX/backend/dx12
+    ${FFX_SDK_ROOT}/Kits/FidelityFX/framegeneration/fsr3/include
+)
+set(FFX_LIB_DIR ${FFX_SDK_ROOT}/Kits/FidelityFX/signedbin)
+set(FFX_BIN_DIR ${FFX_SDK_ROOT}/Kits/FidelityFX/signedbin)
 
 # ============================================================================
 # DXGI Capture Library
@@ -64,6 +77,26 @@ target_link_libraries(osfg_simple_opticalflow PUBLIC
     dxgi
     dxguid
     d3dcompiler
+)
+
+# ============================================================================
+# FSR 3 Optical Flow Library (Stub - requires FidelityFX SDK build)
+# Note: Full integration requires building FidelityFX-SDK from source.
+# This stub allows the code to compile while documenting the integration path.
+# ============================================================================
+add_library(osfg_fsr_opticalflow STATIC
+    src/opticalflow/fsr_opticalflow.cpp
+    src/opticalflow/fsr_opticalflow.h
+)
+
+target_include_directories(osfg_fsr_opticalflow PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${DIRECTX_HEADERS_INCLUDE}
+)
+
+target_link_libraries(osfg_fsr_opticalflow PUBLIC
+    d3d12
+    dxgi
 )
 
 # ============================================================================
@@ -119,6 +152,71 @@ target_include_directories(osfg_presentation PUBLIC
 )
 
 target_link_libraries(osfg_presentation PUBLIC
+    d3d12
+    dxgi
+)
+
+# ============================================================================
+# GPU Transfer Library (Phase 2 - Dual-GPU support)
+# ============================================================================
+add_library(osfg_transfer STATIC
+    src/transfer/gpu_transfer.cpp
+    src/transfer/gpu_transfer.h
+)
+
+target_include_directories(osfg_transfer PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${DIRECTX_HEADERS_INCLUDE}
+)
+
+target_link_libraries(osfg_transfer PUBLIC
+    d3d12
+    dxgi
+)
+
+# ============================================================================
+# Application Layer Library
+# ============================================================================
+add_library(osfg_app STATIC
+    src/app/config_manager.cpp
+    src/app/config_manager.h
+    src/app/hotkey_handler.cpp
+    src/app/hotkey_handler.h
+    src/app/stats_overlay.cpp
+    src/app/stats_overlay.h
+)
+
+target_include_directories(osfg_app PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${DIRECTX_HEADERS_INCLUDE}
+)
+
+target_link_libraries(osfg_app PUBLIC
+    d3d11
+    d2d1
+    dwrite
+    Shell32
+)
+
+# ============================================================================
+# Dual-GPU Pipeline Library (Phase 2)
+# ============================================================================
+add_library(osfg_pipeline STATIC
+    src/pipeline/dual_gpu_pipeline.cpp
+    src/pipeline/dual_gpu_pipeline.h
+)
+
+target_include_directories(osfg_pipeline PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${DIRECTX_HEADERS_INCLUDE}
+)
+
+target_link_libraries(osfg_pipeline PUBLIC
+    osfg_capture
+    osfg_transfer
+    osfg_simple_opticalflow
+    osfg_interpolation
+    osfg_presentation
     d3d12
     dxgi
 )
@@ -184,14 +282,90 @@ target_link_libraries(osfg_demo PRIVATE
     osfg_presentation
 )
 
+# Dual-GPU Pipeline Test (Phase 2)
+add_executable(test_dual_gpu_pipeline
+    tests/test_dual_gpu_pipeline.cpp
+)
+
+target_include_directories(test_dual_gpu_pipeline PRIVATE
+    ${DIRECTX_HEADERS_INCLUDE}
+)
+
+target_link_libraries(test_dual_gpu_pipeline PRIVATE
+    osfg_pipeline
+    osfg_app
+)
+
+# FSR 3 Optical Flow Test
+add_executable(test_fsr_opticalflow
+    tests/test_fsr_opticalflow.cpp
+)
+
+target_include_directories(test_fsr_opticalflow PRIVATE
+    ${DIRECTX_HEADERS_INCLUDE}
+    ${FFX_INCLUDE_DIRS}
+)
+
+target_link_libraries(test_fsr_opticalflow PRIVATE
+    osfg_capture
+    osfg_fsr_opticalflow
+    osfg_interop
+)
+
 # ============================================================================
 # Installation
 # ============================================================================
-install(TARGETS osfg_capture osfg_simple_opticalflow osfg_interop osfg_interpolation osfg_presentation test_dxgi_capture test_simple_opticalflow test_frame_generation osfg_demo
+install(TARGETS
+    osfg_capture
+    osfg_simple_opticalflow
+    osfg_fsr_opticalflow
+    osfg_interop
+    osfg_interpolation
+    osfg_presentation
+    osfg_transfer
+    osfg_app
+    osfg_pipeline
+    test_dxgi_capture
+    test_simple_opticalflow
+    test_fsr_opticalflow
+    test_frame_generation
+    test_dual_gpu_pipeline
+    osfg_demo
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
 )
+
+# ============================================================================
+# Copy FidelityFX DLLs to output directory (if they exist)
+# ============================================================================
+set(FFX_DLLS
+    ${FFX_BIN_DIR}/amd_fidelityfx_framegeneration_dx12.dll
+    ${FFX_BIN_DIR}/amd_fidelityfx_loader_dx12.dll
+    ${FFX_BIN_DIR}/amd_fidelityfx_upscaler_dx12.dll
+)
+
+# Copy DLLs after building test_fsr_opticalflow
+add_custom_command(TARGET test_fsr_opticalflow POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>"
+    COMMENT "Checking for FidelityFX DLLs..."
+)
+
+foreach(DLL ${FFX_DLLS})
+    if(EXISTS ${DLL})
+        add_custom_command(TARGET test_fsr_opticalflow POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DLL}" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>/"
+            COMMENT "Copying ${DLL}"
+        )
+    endif()
+endforeach()
+
+# Installation (copies DLLs if they exist)
+foreach(DLL ${FFX_DLLS})
+    if(EXISTS ${DLL})
+        install(FILES ${DLL} DESTINATION bin)
+    endif()
+endforeach()
 
 # ============================================================================
 # Print Configuration Summary
@@ -202,5 +376,6 @@ message(STATUS "  Version: ${PROJECT_VERSION}")
 message(STATUS "  C++ Standard: ${CMAKE_CXX_STANDARD}")
 message(STATUS "  Build Type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "  Output Directory: ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
-message(STATUS "  Phase 1: Simple Optical Flow (block matching)")
+message(STATUS "  Phase 1: Single-GPU frame generation")
+message(STATUS "  Phase 2: Dual-GPU pipeline")
 message(STATUS "")

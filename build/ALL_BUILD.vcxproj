@@ -174,6 +174,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </ProjectReference>
+    <ProjectReference Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\osfg_app.vcxproj">
+      <Project>{68356E09-9B98-3ECA-BE20-B8AFCFC00AFA}</Project>
+      <Name>osfg_app</Name>
+    </ProjectReference>
     <ProjectReference Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\osfg_capture.vcxproj">
       <Project>{7469CBD7-D8C8-3E06-9D81-C59393E62C35}</Project>
       <Name>osfg_capture</Name>
@@ -181,6 +185,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ProjectReference Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\osfg_demo.vcxproj">
       <Project>{2B94B2D1-12B7-3812-96AA-C9B36C59A5AF}</Project>
       <Name>osfg_demo</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\osfg_fsr_opticalflow.vcxproj">
+      <Project>{F7BBE14B-AE45-3051-B50F-198B3C9275C6}</Project>
+      <Name>osfg_fsr_opticalflow</Name>
     </ProjectReference>
     <ProjectReference Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\osfg_interop.vcxproj">
       <Project>{49FFEDE1-488E-33F6-9855-FD2C0E974BCC}</Project>
@@ -190,6 +198,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <Project>{E878870C-A07B-32E9-B251-9519F1159B99}</Project>
       <Name>osfg_interpolation</Name>
     </ProjectReference>
+    <ProjectReference Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\osfg_pipeline.vcxproj">
+      <Project>{157A399F-ED6A-3483-A199-008BCAA3DB0E}</Project>
+      <Name>osfg_pipeline</Name>
+    </ProjectReference>
     <ProjectReference Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\osfg_presentation.vcxproj">
       <Project>{2B26E701-68F9-3937-B94D-12F93821A849}</Project>
       <Name>osfg_presentation</Name>
@@ -198,6 +210,14 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <Project>{69A7428C-DAAA-3517-B67A-F9DB97416345}</Project>
       <Name>osfg_simple_opticalflow</Name>
     </ProjectReference>
+    <ProjectReference Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\osfg_transfer.vcxproj">
+      <Project>{65F6FC5A-8112-390E-A4F9-6AC3F0D42B9B}</Project>
+      <Name>osfg_transfer</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\test_dual_gpu_pipeline.vcxproj">
+      <Project>{27388906-EE2C-3E9C-8562-DB64E6748296}</Project>
+      <Name>test_dual_gpu_pipeline</Name>
+    </ProjectReference>
     <ProjectReference Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\test_dxgi_capture.vcxproj">
       <Project>{D13A2BB3-7BD6-36C9-B2EE-AF2B69BD25EF}</Project>
       <Name>test_dxgi_capture</Name>
@@ -205,6 +225,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ProjectReference Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\test_frame_generation.vcxproj">
       <Project>{C44763B6-73D1-3F76-9E01-AF85334773A5}</Project>
       <Name>test_frame_generation</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\test_fsr_opticalflow.vcxproj">
+      <Project>{81317CE6-B0D6-3B76-81B7-679A345762D8}</Project>
+      <Name>test_fsr_opticalflow</Name>
     </ProjectReference>
     <ProjectReference Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\test_simple_opticalflow.vcxproj">
       <Project>{9FB5A2DE-7C79-336C-AFAE-8EE9AD6FBECB}</Project>

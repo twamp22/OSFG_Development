@@ -18,21 +18,31 @@ OSFG provides a universal frame generation solution similar to Lossless Scaling,
 - Block-matching optical flow for motion estimation
 - Frame interpolation with motion compensation
 - Simple presentation system for output display
+- Inter-GPU transfer for dual-GPU configurations
+- Configuration manager with INI file support
+- Global hotkey handling for runtime control
+- Real-time statistics overlay using Direct2D
 
 ## Project Structure
 
 ```
 OSFG_Development/
 ├── src/
+│   ├── app/              # Application layer (config, hotkeys, overlay)
 │   ├── capture/          # DXGI frame capture
 │   ├── interop/          # D3D11-D3D12 interoperability
 │   ├── interpolation/    # Frame generation
 │   ├── opticalflow/      # Motion estimation
+│   ├── pipeline/         # Dual-GPU pipeline orchestration
 │   ├── presentation/     # Display output
-│   └── transfer/         # Inter-GPU transfer (future)
+│   └── transfer/         # Inter-GPU transfer for dual-GPU mode
 ├── tests/                # Test applications
 ├── demos/                # Demo applications
-├── shaders/              # GPU shaders
+├── docs/                 # Documentation
+│   ├── api/              # API reference for each module
+│   ├── architecture.md   # System architecture
+│   ├── configuration.md  # Configuration guide
+│   └── getting-started.md # Build and usage guide
 └── external/             # Third-party dependencies (FidelityFX-SDK)
 ```
 
@@ -79,7 +89,9 @@ Binaries are output to `build/bin/Release/`:
 |--------|-------------|
 | `test_dxgi_capture.exe` | DXGI capture test |
 | `test_simple_opticalflow.exe` | Optical flow test |
-| `test_frame_generation.exe` | Full pipeline test |
+| `test_fsr_opticalflow.exe` | FSR 3 optical flow status check |
+| `test_frame_generation.exe` | Full pipeline test (single-GPU) |
+| `test_dual_gpu_pipeline.exe` | Dual-GPU pipeline test |
 | `osfg_demo.exe` | Visual demo application |
 
 ## Libraries
@@ -88,9 +100,13 @@ Binaries are output to `build/bin/Release/`:
 |---------|---------|
 | `osfg_capture` | DXGI Desktop Duplication wrapper |
 | `osfg_simple_opticalflow` | Block-matching optical flow (D3D12 compute) |
+| `osfg_fsr_opticalflow` | FSR 3 optical flow wrapper (stub - see below) |
 | `osfg_interop` | D3D11/D3D12 resource sharing |
 | `osfg_interpolation` | Motion-compensated frame generation |
 | `osfg_presentation` | DirectX 12 presentation |
+| `osfg_transfer` | Inter-GPU transfer for dual-GPU mode |
+| `osfg_pipeline` | Dual-GPU pipeline orchestration |
+| `osfg_app` | Application layer (config, hotkeys, overlay) |
 
 ## Architecture
 
@@ -117,16 +133,44 @@ Binaries are output to `build/bin/Release/`:
 
 ## Development Status
 
-**Current Phase**: Phase 1 - Single-GPU Proof of Concept
+**Current Phase**: Phase 2 - Dual-GPU Pipeline
 
 - [x] DXGI Desktop Duplication capture
 - [x] D3D11/D3D12 interoperability
 - [x] Simple block-matching optical flow
 - [x] Basic frame interpolation
 - [x] Simple presenter
-- [ ] FSR 3 optical flow integration
-- [ ] Dual-GPU support
+- [x] Inter-GPU transfer module
+- [x] Configuration manager
+- [x] Hotkey handler
+- [x] Statistics overlay
+- [x] Dual-GPU pipeline orchestration
+- [~] FSR 3 optical flow integration (SDK built - DLLs available)
 - [ ] Linux support
+
+## FSR 3 Integration Status
+
+The FidelityFX SDK has been successfully built. Pre-compiled DLLs are available in `build/bin/Release/`.
+
+**Current Status**: DLLs available - Integration pending
+
+**Available DLLs**:
+- `amd_fidelityfx_framegeneration_dx12.dll` - Frame generation (includes optical flow)
+- `amd_fidelityfx_loader_dx12.dll` - Dynamic loader
+- `amd_fidelityfx_upscaler_dx12.dll` - Upscaling
+
+**Integration Options**:
+
+1. **Full Frame Generation** (Recommended for quality)
+   - Use `amd_fidelityfx_framegeneration_dx12.dll` directly
+   - Provides optical flow + interpolation as unified pipeline
+   - Requires restructuring OSFG to use FFX for both stages
+
+2. **Standalone Optical Flow**
+   - Requires building FidelityFX from source with shader blob generation
+   - More complex but allows using OSFG's custom interpolation
+
+**Current Approach**: OSFG uses `osfg_simple_opticalflow` (block-matching) by default, which works without external dependencies.
 
 ## Technical Specifications
 
@@ -137,6 +181,15 @@ Binaries are output to `build/bin/Release/`:
 | End-to-End Latency | < 16ms (1 frame @ 60fps) |
 | VRAM Usage | < 500MB per GPU |
 | CPU Overhead | < 5% single core |
+
+## Documentation
+
+Full documentation is available in the [docs/](docs/index.md) directory:
+
+- [Getting Started](docs/getting-started.md) - Build and run OSFG
+- [Architecture](docs/architecture.md) - System design and data flow
+- [Configuration](docs/configuration.md) - Settings reference
+- [API Reference](docs/api/) - Module documentation
 
 ## Related Resources
 
