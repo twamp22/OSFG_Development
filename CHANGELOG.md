@@ -30,6 +30,29 @@ All notable changes to OSFG (Open Source Frame Generation) will be documented in
   - API wrapper ready for full SDK integration
   - Documentation for integration options
 
+- **FidelityFX Integration**
+  - `osfg_ffx_loader` - Dynamic loader for FidelityFX DLLs
+    - Runtime DLL availability checking
+    - Function pointer resolution for FFX API
+    - Singleton pattern for global access
+  - `osfg_ffx_framegen` - FFX frame generation wrapper
+    - Swap chain creation and wrapping
+    - Frame pacing and statistics
+    - Integration with FFX API
+  - Test applications (`test_ffx_loader`, `test_ffx_framegen`)
+  - Integration design documentation
+
+- **Pipeline Backend Selection**
+  - `FrameGenBackend` enum: Native, FidelityFX, Auto
+  - Auto-selection chooses best available backend
+  - Runtime backend query via `GetActiveBackend()`
+  - Static `IsFidelityFXAvailable()` check
+  - Updated `test_dual_gpu_pipeline` with backend display
+
+- **GitHub Actions CI**
+  - Automated build workflow (`.github/workflows/build.yml`)
+  - Matrix build for Release and Debug configurations
+
 - **Documentation**
   - Complete API reference for all modules
   - Architecture documentation

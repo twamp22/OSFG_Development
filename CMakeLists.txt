@@ -100,6 +100,45 @@ target_link_libraries(osfg_fsr_opticalflow PUBLIC
 )
 
 # ============================================================================
+# FidelityFX Dynamic Loader Library
+# ============================================================================
+add_library(osfg_ffx_loader STATIC
+    src/ffx/ffx_loader.cpp
+    src/ffx/ffx_loader.h
+)
+
+target_include_directories(osfg_ffx_loader PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${DIRECTX_HEADERS_INCLUDE}
+    ${FFX_INCLUDE_DIRS}
+)
+
+target_link_libraries(osfg_ffx_loader PUBLIC
+    d3d12
+    dxgi
+)
+
+# ============================================================================
+# FidelityFX Frame Generation Wrapper Library
+# ============================================================================
+add_library(osfg_ffx_framegen STATIC
+    src/ffx/ffx_framegen.cpp
+    src/ffx/ffx_framegen.h
+)
+
+target_include_directories(osfg_ffx_framegen PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${DIRECTX_HEADERS_INCLUDE}
+    ${FFX_INCLUDE_DIRS}
+)
+
+target_link_libraries(osfg_ffx_framegen PUBLIC
+    osfg_ffx_loader
+    d3d12
+    dxgi
+)
+
+# ============================================================================
 # D3D11-D3D12 Interop Library
 # ============================================================================
 add_library(osfg_interop STATIC
@@ -209,6 +248,7 @@ add_library(osfg_pipeline STATIC
 target_include_directories(osfg_pipeline PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${DIRECTX_HEADERS_INCLUDE}
+    ${FFX_INCLUDE_DIRS}
 )
 
 target_link_libraries(osfg_pipeline PUBLIC
@@ -217,6 +257,7 @@ target_link_libraries(osfg_pipeline PUBLIC
     osfg_simple_opticalflow
     osfg_interpolation
     osfg_presentation
+    osfg_ffx_framegen
     d3d12
     dxgi
 )
@@ -312,6 +353,34 @@ target_link_libraries(test_fsr_opticalflow PRIVATE
     osfg_interop
 )
 
+# FFX Loader Test
+add_executable(test_ffx_loader
+    tests/test_ffx_loader.cpp
+)
+
+target_include_directories(test_ffx_loader PRIVATE
+    ${DIRECTX_HEADERS_INCLUDE}
+    ${FFX_INCLUDE_DIRS}
+)
+
+target_link_libraries(test_ffx_loader PRIVATE
+    osfg_ffx_loader
+)
+
+# FFX Frame Generation Test
+add_executable(test_ffx_framegen
+    tests/test_ffx_framegen.cpp
+)
+
+target_include_directories(test_ffx_framegen PRIVATE
+    ${DIRECTX_HEADERS_INCLUDE}
+    ${FFX_INCLUDE_DIRS}
+)
+
+target_link_libraries(test_ffx_framegen PRIVATE
+    osfg_ffx_framegen
+)
+
 # ============================================================================
 # Installation
 # ============================================================================
@@ -319,6 +388,8 @@ install(TARGETS
     osfg_capture
     osfg_simple_opticalflow
     osfg_fsr_opticalflow
+    osfg_ffx_loader
+    osfg_ffx_framegen
     osfg_interop
     osfg_interpolation
     osfg_presentation
@@ -328,6 +399,8 @@ install(TARGETS
     test_dxgi_capture
     test_simple_opticalflow
     test_fsr_opticalflow
+    test_ffx_loader
+    test_ffx_framegen
     test_frame_generation
     test_dual_gpu_pipeline
     osfg_demo

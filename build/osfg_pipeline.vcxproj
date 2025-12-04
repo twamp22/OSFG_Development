@@ -78,7 +78,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\src;C:\vcpkg\installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\src;C:\vcpkg\installed\x64-windows\include;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\api\include;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\api\internal;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\backend\dx12;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\framegeneration\fsr3\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <BufferSecurityCheck></BufferSecurityCheck>
@@ -103,10 +103,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;UNICODE;_UNICODE;WIN32_LEAN_AND_MEAN;NOMINMAX;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\src;C:\vcpkg\installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\src;C:\vcpkg\installed\x64-windows\include;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\api\include;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\api\internal;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\backend\dx12;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\framegeneration\fsr3\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\src;C:\vcpkg\installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\src;C:\vcpkg\installed\x64-windows\include;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\api\include;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\api\internal;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\backend\dx12;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\framegeneration\fsr3\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -119,7 +119,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\src;C:\vcpkg\installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\src;C:\vcpkg\installed\x64-windows\include;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\api\include;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\api\internal;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\backend\dx12;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\framegeneration\fsr3\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <BufferSecurityCheck></BufferSecurityCheck>
@@ -145,10 +145,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;UNICODE;_UNICODE;WIN32_LEAN_AND_MEAN;NOMINMAX;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\src;C:\vcpkg\installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\src;C:\vcpkg\installed\x64-windows\include;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\api\include;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\api\internal;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\backend\dx12;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\framegeneration\fsr3\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\src;C:\vcpkg\installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\src;C:\vcpkg\installed\x64-windows\include;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\api\include;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\api\internal;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\backend\dx12;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\framegeneration\fsr3\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -161,7 +161,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\src;C:\vcpkg\installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\src;C:\vcpkg\installed\x64-windows\include;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\api\include;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\api\internal;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\backend\dx12;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\framegeneration\fsr3\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <BufferSecurityCheck></BufferSecurityCheck>
@@ -187,10 +187,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;UNICODE;_UNICODE;WIN32_LEAN_AND_MEAN;NOMINMAX;CMAKE_INTDIR=\"MinSizeRel\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\src;C:\vcpkg\installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\src;C:\vcpkg\installed\x64-windows\include;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\api\include;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\api\internal;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\backend\dx12;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\framegeneration\fsr3\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\src;C:\vcpkg\installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\src;C:\vcpkg\installed\x64-windows\include;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\api\include;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\api\internal;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\backend\dx12;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\framegeneration\fsr3\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -203,7 +203,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\src;C:\vcpkg\installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\src;C:\vcpkg\installed\x64-windows\include;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\api\include;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\api\internal;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\backend\dx12;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\framegeneration\fsr3\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <BufferSecurityCheck></BufferSecurityCheck>
@@ -228,10 +228,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;UNICODE;_UNICODE;WIN32_LEAN_AND_MEAN;NOMINMAX;CMAKE_INTDIR=\"RelWithDebInfo\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\src;C:\vcpkg\installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\src;C:\vcpkg\installed\x64-windows\include;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\api\include;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\api\internal;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\backend\dx12;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\framegeneration\fsr3\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\src;C:\vcpkg\installed\x64-windows\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\src;C:\vcpkg\installed\x64-windows\include;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\api\include;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\api\internal;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\backend\dx12;C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\external\FidelityFX-SDK\Kits\FidelityFX\framegeneration\fsr3\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -314,6 +314,14 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ProjectReference Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\osfg_capture.vcxproj">
       <Project>{7469CBD7-D8C8-3E06-9D81-C59393E62C35}</Project>
       <Name>osfg_capture</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\osfg_ffx_framegen.vcxproj">
+      <Project>{EBB24419-356A-3AD1-A243-BDC2F25D3335}</Project>
+      <Name>osfg_ffx_framegen</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\osfg_ffx_loader.vcxproj">
+      <Project>{F42AC673-2D1C-33B3-9714-E6C113073C54}</Project>
+      <Name>osfg_ffx_loader</Name>
     </ProjectReference>
     <ProjectReference Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\osfg_interpolation.vcxproj">
       <Project>{E878870C-A07B-32E9-B251-9519F1159B99}</Project>

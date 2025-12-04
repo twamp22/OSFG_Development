@@ -7,6 +7,8 @@
 #include "opticalflow/simple_opticalflow.h"
 #include "interpolation/frame_interpolation.h"
 #include "presentation/simple_presenter.h"
+#include "ffx/ffx_loader.h"
+#include "ffx/ffx_framegen.h"
 
 #include <algorithm>
 #include <sstream>
@@ -34,6 +36,22 @@ bool DualGPUPipeline::Initialize(const DualGPUConfig& config) {
     // Assume 60fps base, multiply by frame gen factor
     double baseFrameTimeMs = 16.667;  // 60 fps
     m_targetFrameTimeMs = baseFrameTimeMs / static_cast<int>(config.multiplier);
+
+    // Select backend
+    if (config.backend == FrameGenBackend::Auto) {
+        // Auto-select: prefer FidelityFX if available
+        m_activeBackend = IsFidelityFXAvailable() ? FrameGenBackend::FidelityFX : FrameGenBackend::Native;
+    } else if (config.backend == FrameGenBackend::FidelityFX) {
+        // User requested FFX, verify it's available
+        if (IsFidelityFXAvailable()) {
+            m_activeBackend = FrameGenBackend::FidelityFX;
+        } else {
+            SetError("FidelityFX backend requested but DLLs not found. Falling back to Native.");
+            m_activeBackend = FrameGenBackend::Native;
+        }
+    } else {
+        m_activeBackend = FrameGenBackend::Native;
+    }
 
     // Initialize pipeline stages
     if (!InitializeCapture()) {
@@ -74,6 +92,10 @@ void DualGPUPipeline::Shutdown() {
     }
 
     // Release in reverse order
+    // FFX backend
+    m_ffxFrameGen.reset();
+
+    // Native backend
     m_presenter.reset();
     m_interpolation.reset();
     m_opticalFlow.reset();
@@ -590,6 +612,7 @@ void DualGPUPipeline::SetFrameMultiplier(FrameMultiplier multiplier) {
 void DualGPUPipeline::ResetStats() {
     std::lock_guard<std::mutex> lock(m_statsMutex);
     m_stats = PipelineStats{};
+    m_stats.activeBackend = m_activeBackend;
 }
 
 void DualGPUPipeline::UpdateStats() {
@@ -608,10 +631,17 @@ void DualGPUPipeline::UpdateStats() {
 }
 
 HWND DualGPUPipeline::GetWindowHandle() const {
+    if (m_activeBackend == FrameGenBackend::FidelityFX && m_ffxFrameGen) {
+        // FFX manages its own swap chain, window handle comes from config
+        return nullptr;  // FFX doesn't expose window handle directly
+    }
     return m_presenter ? m_presenter->GetHWND() : nullptr;
 }
 
 bool DualGPUPipeline::IsWindowOpen() const {
+    if (m_activeBackend == FrameGenBackend::FidelityFX && m_ffxFrameGen) {
+        return m_ffxFrameGen->IsInitialized();
+    }
     return m_presenter ? m_presenter->IsWindowOpen() : false;
 }
 
@@ -628,6 +658,10 @@ void DualGPUPipeline::ReportError(const std::string& error) {
     if (m_config.enableDebugOutput) {
         OutputDebugStringA(("OSFG Error: " + error + "\n").c_str());
     }
+}
+
+bool DualGPUPipeline::IsFidelityFXAvailable() {
+    return OSFG::FFXLoader::IsAvailable();
 }
 
 } // namespace osfg

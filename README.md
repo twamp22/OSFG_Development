@@ -30,6 +30,7 @@ OSFG_Development/
 ├── src/
 │   ├── app/              # Application layer (config, hotkeys, overlay)
 │   ├── capture/          # DXGI frame capture
+│   ├── ffx/              # FidelityFX SDK integration
 │   ├── interop/          # D3D11-D3D12 interoperability
 │   ├── interpolation/    # Frame generation
 │   ├── opticalflow/      # Motion estimation
@@ -90,6 +91,8 @@ Binaries are output to `build/bin/Release/`:
 | `test_dxgi_capture.exe` | DXGI capture test |
 | `test_simple_opticalflow.exe` | Optical flow test |
 | `test_fsr_opticalflow.exe` | FSR 3 optical flow status check |
+| `test_ffx_loader.exe` | FidelityFX DLL loader test |
+| `test_ffx_framegen.exe` | FFX frame generation wrapper test |
 | `test_frame_generation.exe` | Full pipeline test (single-GPU) |
 | `test_dual_gpu_pipeline.exe` | Dual-GPU pipeline test |
 | `osfg_demo.exe` | Visual demo application |
@@ -101,6 +104,8 @@ Binaries are output to `build/bin/Release/`:
 | `osfg_capture` | DXGI Desktop Duplication wrapper |
 | `osfg_simple_opticalflow` | Block-matching optical flow (D3D12 compute) |
 | `osfg_fsr_opticalflow` | FSR 3 optical flow wrapper (stub - see below) |
+| `osfg_ffx_loader` | FidelityFX SDK dynamic DLL loader |
+| `osfg_ffx_framegen` | FidelityFX frame generation wrapper |
 | `osfg_interop` | D3D11/D3D12 resource sharing |
 | `osfg_interpolation` | Motion-compensated frame generation |
 | `osfg_presentation` | DirectX 12 presentation |
@@ -145,32 +150,37 @@ Binaries are output to `build/bin/Release/`:
 - [x] Hotkey handler
 - [x] Statistics overlay
 - [x] Dual-GPU pipeline orchestration
-- [~] FSR 3 optical flow integration (SDK built - DLLs available)
+- [x] FidelityFX frame generation integration
 - [ ] Linux support
 
-## FSR 3 Integration Status
+## FidelityFX Integration Status
 
-The FidelityFX SDK has been successfully built. Pre-compiled DLLs are available in `build/bin/Release/`.
+The FidelityFX SDK has been successfully built and integrated. Pre-compiled DLLs are available in `build/bin/Release/`.
 
-**Current Status**: DLLs available - Integration pending
+**Current Status**: Fully integrated with FFX frame generation wrapper
 
 **Available DLLs**:
 - `amd_fidelityfx_framegeneration_dx12.dll` - Frame generation (includes optical flow)
 - `amd_fidelityfx_loader_dx12.dll` - Dynamic loader
 - `amd_fidelityfx_upscaler_dx12.dll` - Upscaling
 
-**Integration Options**:
+**Integration Modules**:
 
-1. **Full Frame Generation** (Recommended for quality)
-   - Use `amd_fidelityfx_framegeneration_dx12.dll` directly
-   - Provides optical flow + interpolation as unified pipeline
-   - Requires restructuring OSFG to use FFX for both stages
+1. **FFX Loader** (`osfg_ffx_loader`)
+   - Dynamic loading of FidelityFX DLLs
+   - Runtime availability checking
+   - Function pointer resolution for FFX API
 
-2. **Standalone Optical Flow**
-   - Requires building FidelityFX from source with shader blob generation
-   - More complex but allows using OSFG's custom interpolation
+2. **FFX Frame Generation** (`osfg_ffx_framegen`)
+   - Complete frame generation wrapper
+   - Swap chain creation and wrapping
+   - Frame pacing and statistics
 
-**Current Approach**: OSFG uses `osfg_simple_opticalflow` (block-matching) by default, which works without external dependencies.
+**Backend Selection**:
+- `osfg_simple_opticalflow` - Works without external dependencies (default fallback)
+- `osfg_ffx_framegen` - Higher quality with FidelityFX (requires AMD GPU support)
+
+See [docs/fidelityfx-integration-design.md](docs/fidelityfx-integration-design.md) for implementation details.
 
 ## Technical Specifications
 

@@ -37,7 +37,14 @@
       "Bash(\"C:\\Users\\YeaDaddy\\Documents\\GitHub\\OSFG_Development\\build\\bin\\Release\\test_fsr_opticalflow.exe\")",
       "Bash(\"C:\\Users\\YeaDaddy\\Documents\\GitHub\\OSFG_Development\\build\\bin\\Release\\test_dxgi_capture.exe\")",
       "Bash(\"C:\\Users\\YeaDaddy\\Documents\\GitHub\\OSFG_Development\\build\\bin\\Release\\test_simple_opticalflow.exe\")",
-      "Bash(\"C:\\Users\\YeaDaddy\\Documents\\GitHub\\OSFG_Development\\build\\bin\\Release\\test_frame_generation.exe\")"
+      "Bash(\"C:\\Users\\YeaDaddy\\Documents\\GitHub\\OSFG_Development\\build\\bin\\Release\\test_frame_generation.exe\")",
+      "Bash(\"C:\\Program Files\\CMake\\bin\\cmake.exe\" --build:*)",
+      "Bash(\"C:\\Program Files\\CMake\\bin\\cmake.exe\" --build \"C:\\Users\\YeaDaddy\\Documents\\GitHub\\OSFG_Development\\build\" --config Release --target osfg_ffx_loader --clean-first)",
+      "Bash(\"C:\\Program Files\\CMake\\bin\\cmake.exe\" --build \"C:\\Users\\YeaDaddy\\Documents\\GitHub\\OSFG_Development\\build\" --config Release --target osfg_ffx_loader)",
+      "Bash(\"C:\\Program Files\\CMake\\bin\\cmake.exe\" --build \"C:\\Users\\YeaDaddy\\Documents\\GitHub\\OSFG_Development\\build\" --config Release --target test_ffx_loader)",
+      "Bash(\"C:\\Users\\YeaDaddy\\Documents\\GitHub\\OSFG_Development\\build\\bin\\Release\\test_ffx_loader.exe\")",
+      "Bash(\"C:\\Program Files\\CMake\\bin\\cmake.exe\" --build \"C:\\Users\\YeaDaddy\\Documents\\GitHub\\OSFG_Development\\build\" --config Release --target osfg_ffx_framegen --target test_ffx_framegen)",
+      "Bash(\"C:\\Users\\YeaDaddy\\Documents\\GitHub\\OSFG_Development\\build\\bin\\Release\\test_ffx_framegen.exe\")"
     ],
     "deny": [],
     "ask": []

@@ -18,6 +18,7 @@ Welcome to the Open Source Frame Generation (OSFG) documentation.
 - [Capture Module](api/capture.md) - DXGI Desktop Duplication
 - [Optical Flow Module](api/opticalflow.md) - Simple block-matching motion estimation
 - [FSR Optical Flow Module](api/fsr-opticalflow.md) - AMD FidelityFX optical flow (stub)
+- [FFX Integration](api/ffx-integration.md) - FidelityFX loader and frame generation
 - [Interpolation Module](api/interpolation.md) - Frame generation
 - [Presentation Module](api/presentation.md) - Display output
 - [Transfer Module](api/transfer.md) - Inter-GPU transfer
@@ -42,6 +43,7 @@ OSFG is an open source frame generation system that:
 
 - **Universal Compatibility**: Works with any game or application without engine integration
 - **Dual-GPU Support**: Offload frame generation to a secondary GPU
+- **Multiple Backends**: Native (SimpleOpticalFlow) or FidelityFX frame generation
 - **Low Latency**: Optimized pipeline targeting < 16ms total latency
 - **Configurable**: INI-based configuration with runtime hotkey control
 - **Performance Overlay**: Real-time statistics display
@@ -63,5 +65,5 @@ OSFG is an open source frame generation system that:
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 0.2.0 | Dec 2025 | Phase 2: Dual-GPU pipeline orchestration |
+| 0.2.0 | Dec 2025 | Phase 2: Dual-GPU pipeline, FidelityFX integration, backend selection |
 | 0.1.0 | Dec 2025 | Initial Phase 1 implementation |

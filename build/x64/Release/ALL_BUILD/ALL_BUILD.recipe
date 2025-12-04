@@ -14,6 +14,12 @@
       <FullPath>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\bin\Release\test_dxgi_capture.exe</FullPath>
     </ProjectOutput>
     <ProjectOutput>
+      <FullPath>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\bin\Release\test_ffx_framegen.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\bin\Release\test_ffx_loader.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
       <FullPath>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\bin\Release\test_frame_generation.exe</FullPath>
     </ProjectOutput>
     <ProjectOutput>

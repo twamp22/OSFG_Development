@@ -41,6 +41,7 @@ namespace OSFG {
     class SimpleOpticalFlow;
     class FrameInterpolation;
     class SimplePresenter;
+    class FFXFrameGeneration;
 }
 
 namespace osfg {
@@ -52,6 +53,13 @@ enum class FrameMultiplier {
     X2 = 2,     // 60 -> 120 fps
     X3 = 3,     // 60 -> 180 fps
     X4 = 4      // 60 -> 240 fps
+};
+
+// Frame generation backend
+enum class FrameGenBackend {
+    Native,     // SimpleOpticalFlow + OSFG Interpolation (default, no dependencies)
+    FidelityFX, // AMD FidelityFX Frame Generation (higher quality, requires FFX DLLs)
+    Auto        // Automatically select best available backend
 };
 
 // Pipeline statistics
@@ -77,6 +85,9 @@ struct PipelineStats {
     // Transfer stats
     double transferThroughputMBps = 0.0;
     bool usingPeerToPeer = false;
+
+    // Backend info
+    FrameGenBackend activeBackend = FrameGenBackend::Native;
 };
 
 // Pipeline configuration
@@ -92,6 +103,7 @@ struct DualGPUConfig {
     // Frame generation
     FrameMultiplier multiplier = FrameMultiplier::X2;
     bool enableFrameGen = true;
+    FrameGenBackend backend = FrameGenBackend::Auto;  // Auto-select best backend
 
     // Capture settings
     uint32_t captureMonitor = 0;
@@ -161,6 +173,12 @@ public:
     void SetFrameMultiplier(FrameMultiplier multiplier);
     FrameMultiplier GetFrameMultiplier() const { return m_config.multiplier; }
 
+    // Get active backend
+    FrameGenBackend GetActiveBackend() const { return m_activeBackend; }
+
+    // Check if FidelityFX is available
+    static bool IsFidelityFXAvailable();
+
     // Get statistics
     const PipelineStats& GetStats() const { return m_stats; }
     void ResetStats();
@@ -216,9 +234,13 @@ private:
     ComPtr<ID3D12GraphicsCommandList> m_computeCommandList;
 
     // Compute components (on secondary GPU)
+    // Native backend
     std::unique_ptr<OSFG::SimpleOpticalFlow> m_opticalFlow;
     std::unique_ptr<OSFG::FrameInterpolation> m_interpolation;
     std::unique_ptr<OSFG::SimplePresenter> m_presenter;
+
+    // FidelityFX backend (alternative to Native)
+    std::unique_ptr<OSFG::FFXFrameGeneration> m_ffxFrameGen;
 
     // Synchronization
     ComPtr<ID3D12Fence> m_computeFence;
@@ -234,6 +256,7 @@ private:
     bool m_initialized = false;
     std::atomic<bool> m_running{false};
     std::atomic<bool> m_frameGenEnabled{true};
+    FrameGenBackend m_activeBackend = FrameGenBackend::Native;
     std::string m_lastError;
 
     // Statistics

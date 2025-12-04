@@ -1,0 +1,104 @@
+name: Build OSFG
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup Visual Studio
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Install vcpkg
+      run: |
+        git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg
+        C:\vcpkg\bootstrap-vcpkg.bat
+        C:\vcpkg\vcpkg integrate install
+
+    - name: Install DirectX Headers
+      run: |
+        C:\vcpkg\vcpkg install directx-headers:x64-windows
+
+    - name: Configure CMake
+      run: cmake -B build -G "Visual Studio 17 2022" -A x64
+
+    - name: Build
+      run: cmake --build build --config ${{ env.BUILD_TYPE }}
+
+    - name: List build outputs
+      run: |
+        echo "=== Libraries ==="
+        dir build\lib\${{ env.BUILD_TYPE }}\*.lib
+        echo ""
+        echo "=== Executables ==="
+        dir build\bin\${{ env.BUILD_TYPE }}\*.exe
+
+    - name: Run FSR status check
+      run: build\bin\${{ env.BUILD_TYPE }}\test_fsr_opticalflow.exe
+      continue-on-error: true
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: osfg-windows-x64
+        path: |
+          build/bin/${{ env.BUILD_TYPE }}/*.exe
+          build/lib/${{ env.BUILD_TYPE }}/*.lib
+        retention-days: 7
+
+    - name: Upload FidelityFX DLLs
+      uses: actions/upload-artifact@v4
+      with:
+        name: fidelityfx-dlls
+        path: |
+          external/FidelityFX-SDK/Kits/FidelityFX/signedbin/*.dll
+        retention-days: 7
+        if-no-files-found: ignore
+
+  build-fidelityfx:
+    runs-on: windows-latest
+    needs: build
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup Visual Studio
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Install vcpkg
+      run: |
+        git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg
+        C:\vcpkg\bootstrap-vcpkg.bat
+        C:\vcpkg\vcpkg integrate install
+
+    - name: Build FidelityFX FSR Sample
+      run: |
+        msbuild external\FidelityFX-SDK\Samples\Upscalers\FidelityFX_FSR\dx12\FidelityFX_FSR_2022.sln /p:Configuration=Release /p:Platform=x64 /v:minimal
+      continue-on-error: true
+
+    - name: Upload FidelityFX build
+      uses: actions/upload-artifact@v4
+      with:
+        name: fidelityfx-build
+        path: |
+          external/FidelityFX-SDK/Samples/Upscalers/FidelityFX_FSR/dx12/x64/Release/*.exe
+          external/FidelityFX-SDK/Samples/Upscalers/FidelityFX_FSR/dx12/x64/Release/*.dll
+        retention-days: 7
+        if-no-files-found: ignore

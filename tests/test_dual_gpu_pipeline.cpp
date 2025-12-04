@@ -41,8 +41,18 @@ void PrintGPUInfo() {
     printf("\n");
 }
 
+const char* GetBackendName(FrameGenBackend backend) {
+    switch (backend) {
+        case FrameGenBackend::Native: return "Native";
+        case FrameGenBackend::FidelityFX: return "FidelityFX";
+        case FrameGenBackend::Auto: return "Auto";
+        default: return "Unknown";
+    }
+}
+
 void PrintStats(const PipelineStats& stats) {
     printf("\r");
+    printf("[%s] ", GetBackendName(stats.activeBackend));
     printf("FPS: %.1f (base) / %.1f (output) | ", stats.baseFPS, stats.outputFPS);
     printf("Capture: %.1fms | ", stats.captureTimeMs);
     printf("Transfer: %.1fms | ", stats.transferTimeMs);
@@ -95,6 +105,13 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    // Check FidelityFX availability
+    printf("=== Backend Availability ===\n");
+    printf("  Native (SimpleOpticalFlow): Always available\n");
+    printf("  FidelityFX Frame Generation: %s\n",
+           DualGPUPipeline::IsFidelityFXAvailable() ? "Available" : "Not available");
+    printf("\n");
+
     // Configure pipeline
     DualGPUConfig config;
     config.primaryGPU = 0;
@@ -105,6 +122,7 @@ int main(int argc, char* argv[]) {
     config.captureMonitor = 0;
     config.windowTitle = L"OSFG Dual-GPU Test";
     config.enableDebugOutput = true;
+    config.backend = FrameGenBackend::Auto;  // Auto-select best backend
 
     printf("Configuration:\n");
     printf("  Primary GPU (Capture):   [%d] %ls\n",
@@ -113,6 +131,7 @@ int main(int argc, char* argv[]) {
            config.secondaryGPU, gpus[config.secondaryGPU].description.c_str());
     printf("  Frame Multiplier: %dX\n", static_cast<int>(config.multiplier));
     printf("  VSync: %s\n", config.vsync ? "Enabled" : "Disabled");
+    printf("  Backend: Auto (will select best available)\n");
     printf("\n");
 
     // Initialize pipeline
@@ -131,7 +150,8 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    printf("Pipeline initialized successfully!\n\n");
+    printf("Pipeline initialized successfully!\n");
+    printf("  Active Backend: %s\n\n", GetBackendName(pipeline.GetActiveBackend()));
 
     // Initialize hotkeys
     HotkeyHandler hotkeys;
