@@ -6,8 +6,8 @@
 #include <chrono>
 #include <fstream>
 
-// Optimized Optical Flow Shader
-// Uses shared memory caching and three-step search for better performance
+// Fully Parallel Optical Flow Shader
+// All 64 threads participate in the search - much faster than single-threaded
 static const char* g_OpticalFlowShaderSource = R"(
 // Input textures
 Texture2D<float4> g_CurrentFrame : register(t0);
@@ -27,55 +27,38 @@ cbuffer OpticalFlowConstants : register(b0)
     float g_MaxLuminance;
 };
 
-// Shared memory for caching - sized for 8x8 block + 16 pixel search radius on each side
-// Max size: (8 + 32) x (8 + 32) = 40x40 = 1600 floats per frame = 3200 total
 #define TILE_SIZE 8
-#define MAX_SEARCH 16
+#define MAX_SEARCH 8
 #define SHARED_SIZE (TILE_SIZE + MAX_SEARCH * 2)
+#define NUM_THREADS (TILE_SIZE * TILE_SIZE)
+
+// Shared memory
 groupshared float s_CurrentLum[TILE_SIZE][TILE_SIZE];
 groupshared float s_PreviousLum[SHARED_SIZE][SHARED_SIZE];
+groupshared float s_SAD[NUM_THREADS];
+groupshared int2 s_Offset[NUM_THREADS];
 
 float RGBToLuminance(float3 color)
 {
     return dot(color, float3(0.2126, 0.7152, 0.0722));
 }
 
-// Compute SAD between current block (in shared mem) and a region of previous (in shared mem)
-float ComputeSADShared(int2 offset, int searchRadius)
-{
-    float sad = 0.0;
-    int baseOffset = searchRadius;  // Offset in shared memory for center
-
-    [unroll]
-    for (int y = 0; y < TILE_SIZE; y++)
-    {
-        [unroll]
-        for (int x = 0; x < TILE_SIZE; x++)
-        {
-            float currLum = s_CurrentLum[y][x];
-            float prevLum = s_PreviousLum[baseOffset + offset.y + y][baseOffset + offset.x + x];
-            sad += abs(currLum - prevLum);
-        }
-    }
-    return sad;
-}
-
 [numthreads(TILE_SIZE, TILE_SIZE, 1)]
-void CSMain(uint3 groupId : SV_GroupID, uint3 threadId : SV_GroupThreadID, uint3 dispatchId : SV_DispatchThreadID)
+void CSMain(uint3 groupId : SV_GroupID, uint3 threadId : SV_GroupThreadID)
 {
-    // Each thread group processes one block
     int2 blockPos = int2(groupId.xy) * TILE_SIZE;
     int2 localId = int2(threadId.xy);
     int localIdx = localId.y * TILE_SIZE + localId.x;
 
-    // Bounds check for output
     if (groupId.x >= g_OutputSize.x || groupId.y >= g_OutputSize.y)
         return;
 
     int searchRadius = min((int)g_SearchRadius, MAX_SEARCH);
+    int searchDiameter = searchRadius * 2 + 1;
+    int totalSearchPositions = searchDiameter * searchDiameter;
     int sharedSize = TILE_SIZE + searchRadius * 2;
 
-    // Load current block into shared memory (one pixel per thread)
+    // Load current block into shared memory
     {
         int2 pixelPos = blockPos + localId;
         pixelPos = clamp(pixelPos, int2(0, 0), int2(g_InputSize) - 1);
@@ -83,106 +66,88 @@ void CSMain(uint3 groupId : SV_GroupID, uint3 threadId : SV_GroupThreadID, uint3
     }
 
     // Load previous frame search region into shared memory
-    // Need to load (TILE_SIZE + 2*searchRadius)^2 pixels with only TILE_SIZE^2 threads
     int totalPrevPixels = sharedSize * sharedSize;
-    int pixelsPerThread = (totalPrevPixels + TILE_SIZE * TILE_SIZE - 1) / (TILE_SIZE * TILE_SIZE);
+    int pixelsPerThread = (totalPrevPixels + NUM_THREADS - 1) / NUM_THREADS;
 
     for (int i = 0; i < pixelsPerThread; i++)
     {
-        int pixelIdx = localIdx + i * (TILE_SIZE * TILE_SIZE);
+        int pixelIdx = localIdx + i * NUM_THREADS;
         if (pixelIdx < totalPrevPixels)
         {
             int sy = pixelIdx / sharedSize;
             int sx = pixelIdx % sharedSize;
-
             int2 pixelPos = blockPos + int2(sx, sy) - int2(searchRadius, searchRadius);
             pixelPos = clamp(pixelPos, int2(0, 0), int2(g_InputSize) - 1);
-
             s_PreviousLum[sy][sx] = RGBToLuminance(g_PreviousFrame[pixelPos].rgb);
         }
     }
 
     GroupMemoryBarrierWithGroupSync();
 
-    // Only thread 0 performs the search and writes the result
-    if (localIdx != 0)
-        return;
-
+    // Each thread evaluates multiple search positions
     float bestSAD = 1e10;
-    int2 bestMotion = int2(0, 0);
+    int2 bestOffset = int2(0, 0);
 
-    // Three-Step Search algorithm for fast motion estimation
-    // Step sizes: searchRadius/2, searchRadius/4, 1 (or similar progression)
-    int step = max(searchRadius / 2, 1);
-    int2 center = int2(0, 0);
+    int positionsPerThread = (totalSearchPositions + NUM_THREADS - 1) / NUM_THREADS;
 
-    while (step >= 1)
+    for (int p = 0; p < positionsPerThread; p++)
     {
-        // Search 9 positions around center at current step size
-        for (int dy = -1; dy <= 1; dy++)
+        int searchIdx = localIdx + p * NUM_THREADS;
+        if (searchIdx >= totalSearchPositions)
+            break;
+
+        int oy = (searchIdx / searchDiameter) - searchRadius;
+        int ox = (searchIdx % searchDiameter) - searchRadius;
+        int2 offset = int2(ox, oy);
+
+        // Compute SAD for this offset
+        float sad = 0.0;
+        int baseOffset = searchRadius;
+
+        [unroll]
+        for (int y = 0; y < TILE_SIZE; y++)
         {
-            for (int dx = -1; dx <= 1; dx++)
+            [unroll]
+            for (int x = 0; x < TILE_SIZE; x++)
             {
-                int2 offset = center + int2(dx, dy) * step;
-
-                // Bounds check
-                if (offset.x < -searchRadius || offset.x > searchRadius ||
-                    offset.y < -searchRadius || offset.y > searchRadius)
-                    continue;
-
-                // Check if search position is valid in image
-                int2 searchPos = blockPos + offset;
-                if (searchPos.x < 0 || searchPos.y < 0 ||
-                    searchPos.x + TILE_SIZE > (int)g_InputSize.x ||
-                    searchPos.y + TILE_SIZE > (int)g_InputSize.y)
-                    continue;
-
-                float sad = ComputeSADShared(offset, searchRadius);
-
-                if (sad < bestSAD)
-                {
-                    bestSAD = sad;
-                    bestMotion = offset;
-                }
+                float currLum = s_CurrentLum[y][x];
+                float prevLum = s_PreviousLum[baseOffset + oy + y][baseOffset + ox + x];
+                sad += abs(currLum - prevLum);
             }
         }
 
-        // Move center to best position and reduce step
-        center = bestMotion;
-        step = step / 2;
-    }
-
-    // Final refinement: check immediate neighbors of best position
-    for (int dy = -1; dy <= 1; dy++)
-    {
-        for (int dx = -1; dx <= 1; dx++)
+        if (sad < bestSAD)
         {
-            if (dx == 0 && dy == 0) continue;
-
-            int2 offset = bestMotion + int2(dx, dy);
-
-            if (offset.x < -searchRadius || offset.x > searchRadius ||
-                offset.y < -searchRadius || offset.y > searchRadius)
-                continue;
-
-            int2 searchPos = blockPos + offset;
-            if (searchPos.x < 0 || searchPos.y < 0 ||
-                searchPos.x + TILE_SIZE > (int)g_InputSize.x ||
-                searchPos.y + TILE_SIZE > (int)g_InputSize.y)
-                continue;
-
-            float sad = ComputeSADShared(offset, searchRadius);
-
-            if (sad < bestSAD)
-            {
-                bestSAD = sad;
-                bestMotion = offset;
-            }
+            bestSAD = sad;
+            bestOffset = offset;
         }
     }
 
-    // Write result (scaled by 16 for sub-pixel precision)
-    g_MotionVectors[groupId.xy] = bestMotion * 16;
+    // Store this thread's best result
+    s_SAD[localIdx] = bestSAD;
+    s_Offset[localIdx] = bestOffset;
+
+    GroupMemoryBarrierWithGroupSync();
+
+    // Parallel reduction to find global minimum
+    for (int stride = NUM_THREADS / 2; stride > 0; stride >>= 1)
+    {
+        if (localIdx < stride)
+        {
+            if (s_SAD[localIdx + stride] < s_SAD[localIdx])
+            {
+                s_SAD[localIdx] = s_SAD[localIdx + stride];
+                s_Offset[localIdx] = s_Offset[localIdx + stride];
+            }
+        }
+        GroupMemoryBarrierWithGroupSync();
+    }
+
+    // Thread 0 writes the final result
+    if (localIdx == 0)
+    {
+        g_MotionVectors[groupId.xy] = s_Offset[0] * 16;
+    }
 }
 )";
 

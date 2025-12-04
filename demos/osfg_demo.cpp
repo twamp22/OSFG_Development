@@ -150,7 +150,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     ofConfig.width = captureWidth;
     ofConfig.height = captureHeight;
     ofConfig.blockSize = 8;
-    ofConfig.searchRadius = 16;  // Three-step search makes larger radius efficient (~36 positions vs 1089)
+    ofConfig.searchRadius = 8;  // Reduced radius with fully parallel search
 
     if (!opticalFlow.Initialize(d3d12Device.Get(), ofConfig)) {
         MessageBoxW(nullptr, L"Failed to initialize optical flow", L"OSFG Error", MB_OK | MB_ICONERROR);
