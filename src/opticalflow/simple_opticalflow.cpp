@@ -476,7 +476,45 @@ bool SimpleOpticalFlow::CreateResources()
 
     m_device->CreateUnorderedAccessView(m_motionVectorTexture.Get(), nullptr, &uavDesc, uavHandle);
 
+    // Create GPU timestamp query heap (2 queries: start and end)
+    D3D12_QUERY_HEAP_DESC queryHeapDesc = {};
+    queryHeapDesc.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
+    queryHeapDesc.Count = 2;
+    hr = m_device->CreateQueryHeap(&queryHeapDesc, IID_PPV_ARGS(&m_timestampQueryHeap));
+    if (FAILED(hr)) {
+        // Non-fatal: GPU timing just won't be available
+        m_gpuTimingEnabled = false;
+    } else {
+        // Create readback buffer for timestamps
+        D3D12_RESOURCE_DESC readbackDesc = {};
+        readbackDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+        readbackDesc.Width = 2 * sizeof(uint64_t);
+        readbackDesc.Height = 1;
+        readbackDesc.DepthOrArraySize = 1;
+        readbackDesc.MipLevels = 1;
+        readbackDesc.Format = DXGI_FORMAT_UNKNOWN;
+        readbackDesc.SampleDesc.Count = 1;
+        readbackDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+        D3D12_HEAP_PROPERTIES readbackHeap = {};
+        readbackHeap.Type = D3D12_HEAP_TYPE_READBACK;
+
+        hr = m_device->CreateCommittedResource(
+            &readbackHeap, D3D12_HEAP_FLAG_NONE, &readbackDesc,
+            D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
+            IID_PPV_ARGS(&m_timestampReadbackBuffer));
+
+        m_gpuTimingEnabled = SUCCEEDED(hr);
+    }
+
     return true;
+}
+
+void SimpleOpticalFlow::SetTimestampFrequency(ID3D12CommandQueue* cmdQueue)
+{
+    if (cmdQueue && m_gpuTimingEnabled) {
+        cmdQueue->GetTimestampFrequency(&m_gpuTimestampFrequency);
+    }
 }
 
 bool SimpleOpticalFlow::Dispatch(ID3D12Resource* currentFrame,
@@ -490,8 +528,31 @@ bool SimpleOpticalFlow::Dispatch(ID3D12Resource* currentFrame,
 
     auto startTime = std::chrono::high_resolution_clock::now();
 
+    // Read back previous frame's GPU timestamps (if available)
+    if (m_gpuTimingEnabled && m_stats.framesProcessed > 0) {
+        D3D12_RANGE readRange = { 0, 2 * sizeof(uint64_t) };
+        uint64_t* timestamps = nullptr;
+        if (SUCCEEDED(m_timestampReadbackBuffer->Map(0, &readRange, reinterpret_cast<void**>(&timestamps)))) {
+            uint64_t startTs = timestamps[0];
+            uint64_t endTs = timestamps[1];
+            D3D12_RANGE writeRange = { 0, 0 };
+            m_timestampReadbackBuffer->Unmap(0, &writeRange);
+
+            if (m_gpuTimestampFrequency > 0 && endTs > startTs) {
+                double gpuTimeMs = (double)(endTs - startTs) * 1000.0 / (double)m_gpuTimestampFrequency;
+                m_stats.lastGpuTimeMs = gpuTimeMs;
+
+                const double alpha = 0.1;
+                if (m_stats.framesProcessed == 1) {
+                    m_stats.avgGpuTimeMs = gpuTimeMs;
+                } else {
+                    m_stats.avgGpuTimeMs = alpha * gpuTimeMs + (1.0 - alpha) * m_stats.avgGpuTimeMs;
+                }
+            }
+        }
+    }
+
     // Transition motion vector texture back to UAV state if it was left in shader resource state
-    // (from previous frame's interpolation read)
     if (m_stats.framesProcessed > 0) {
         D3D12_RESOURCE_BARRIER barrier = {};
         barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -546,11 +607,22 @@ bool SimpleOpticalFlow::Dispatch(ID3D12Resource* currentFrame,
     gpuHandle.ptr += 2 * m_srvUavDescriptorSize;
     commandList->SetComputeRootDescriptorTable(2, gpuHandle); // UAV
 
+    // GPU timestamp: start
+    if (m_gpuTimingEnabled) {
+        commandList->EndQuery(m_timestampQueryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, 0);
+    }
+
     // Dispatch - one thread group per block (each group is 8x8 threads working together)
     commandList->Dispatch(m_mvWidth, m_mvHeight, 1);
 
+    // GPU timestamp: end
+    if (m_gpuTimingEnabled) {
+        commandList->EndQuery(m_timestampQueryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, 1);
+        commandList->ResolveQueryData(m_timestampQueryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP,
+                                       0, 2, m_timestampReadbackBuffer.Get(), 0);
+    }
+
     // Transition motion vector texture from UAV to PIXEL_SHADER_RESOURCE
-    // so interpolation can read it
     D3D12_RESOURCE_BARRIER barrier = {};
     barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
     barrier.Transition.pResource = m_motionVectorTexture.Get();

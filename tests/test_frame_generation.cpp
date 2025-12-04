@@ -144,6 +144,7 @@ int main()
     uint32_t mvHeight = opticalFlow.GetMotionVectorHeight();
     std::cout << "      Optical flow initialized." << std::endl;
     std::cout << "      Motion vector size: " << mvWidth << "x" << mvHeight << std::endl;
+    opticalFlow.SetTimestampFrequency(commandQueue.Get());
 
     // ========================================================================
     // Step 5: Initialize Frame Interpolation
@@ -163,6 +164,7 @@ int main()
     }
     std::cout << "      Frame interpolation initialized." << std::endl;
     std::cout << "      Output size: " << interpConfig.width << "x" << interpConfig.height << std::endl;
+    interpolation.SetTimestampFrequency(commandQueue.Get());
 
     // ========================================================================
     // Step 6: Create Command List and Fence
@@ -344,14 +346,22 @@ int main()
     std::cout << "  Theoretical 2x FPS: " << (2.0 * frameCount / totalTime) << std::endl;
 
     if (generatedFrames > 0) {
+        auto ofStats = opticalFlow.GetStats();
+        auto interpStats = interpolation.GetStats();
+
         std::cout << "\nLatency Breakdown (average per frame):" << std::endl;
         std::cout << "  Capture:       " << std::setprecision(2) << (totalCaptureTimeMs / frameCount) << " ms" << std::endl;
         std::cout << "  Interop:       " << (totalInteropTimeMs / frameCount) << " ms" << std::endl;
-        std::cout << "  Optical Flow:  " << (totalOpticalFlowTimeMs / generatedFrames) << " ms" << std::endl;
-        std::cout << "  Interpolation: " << (totalInterpolationTimeMs / generatedFrames) << " ms" << std::endl;
+        std::cout << "  Optical Flow:  " << (totalOpticalFlowTimeMs / generatedFrames) << " ms (CPU)" << std::endl;
+        std::cout << "  Interpolation: " << (totalInterpolationTimeMs / generatedFrames) << " ms (CPU)" << std::endl;
         double totalLatency = (totalCaptureTimeMs + totalInteropTimeMs) / frameCount +
                               (totalOpticalFlowTimeMs + totalInterpolationTimeMs) / generatedFrames;
         std::cout << "  Total:         " << totalLatency << " ms" << std::endl;
+
+        std::cout << "\nGPU Timing (shader execution only):" << std::endl;
+        std::cout << "  Optical Flow:  " << ofStats.avgGpuTimeMs << " ms" << std::endl;
+        std::cout << "  Interpolation: " << interpStats.avgGpuTimeMs << " ms" << std::endl;
+        std::cout << "  Total GPU:     " << (ofStats.avgGpuTimeMs + interpStats.avgGpuTimeMs) << " ms" << std::endl;
     }
 
     std::cout << "\nResource Summary:" << std::endl;
@@ -375,6 +385,9 @@ int main()
     std::cout << "  - Integrate with game/application hooks" << std::endl;
     std::cout << "  - Optimize for lower latency" << std::endl;
     std::cout << "  - Add VSync/frame pacing" << std::endl;
+
+    std::cout << "\nPress Enter to exit..." << std::endl;
+    std::cin.get();
 
     return 0;
 }

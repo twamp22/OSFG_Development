@@ -343,7 +343,43 @@ bool FrameInterpolation::CreateResources()
         return false;
     }
 
+    // Create GPU timestamp query heap (2 queries: start and end)
+    D3D12_QUERY_HEAP_DESC queryHeapDesc = {};
+    queryHeapDesc.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
+    queryHeapDesc.Count = 2;
+    hr = m_device->CreateQueryHeap(&queryHeapDesc, IID_PPV_ARGS(&m_timestampQueryHeap));
+    if (FAILED(hr)) {
+        m_gpuTimingEnabled = false;
+    } else {
+        D3D12_RESOURCE_DESC readbackDesc = {};
+        readbackDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+        readbackDesc.Width = 2 * sizeof(uint64_t);
+        readbackDesc.Height = 1;
+        readbackDesc.DepthOrArraySize = 1;
+        readbackDesc.MipLevels = 1;
+        readbackDesc.Format = DXGI_FORMAT_UNKNOWN;
+        readbackDesc.SampleDesc.Count = 1;
+        readbackDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+        D3D12_HEAP_PROPERTIES readbackHeap = {};
+        readbackHeap.Type = D3D12_HEAP_TYPE_READBACK;
+
+        hr = m_device->CreateCommittedResource(
+            &readbackHeap, D3D12_HEAP_FLAG_NONE, &readbackDesc,
+            D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
+            IID_PPV_ARGS(&m_timestampReadbackBuffer));
+
+        m_gpuTimingEnabled = SUCCEEDED(hr);
+    }
+
     return true;
+}
+
+void FrameInterpolation::SetTimestampFrequency(ID3D12CommandQueue* cmdQueue)
+{
+    if (cmdQueue && m_gpuTimingEnabled) {
+        cmdQueue->GetTimestampFrequency(&m_gpuTimestampFrequency);
+    }
 }
 
 bool FrameInterpolation::Dispatch(ID3D12Resource* previousFrame,
@@ -362,6 +398,30 @@ bool FrameInterpolation::Dispatch(ID3D12Resource* previousFrame,
     }
 
     auto startTime = std::chrono::high_resolution_clock::now();
+
+    // Read back previous frame's GPU timestamps (if available)
+    if (m_gpuTimingEnabled && m_stats.framesInterpolated > 0) {
+        D3D12_RANGE readRange = { 0, 2 * sizeof(uint64_t) };
+        uint64_t* timestamps = nullptr;
+        if (SUCCEEDED(m_timestampReadbackBuffer->Map(0, &readRange, reinterpret_cast<void**>(&timestamps)))) {
+            uint64_t startTs = timestamps[0];
+            uint64_t endTs = timestamps[1];
+            D3D12_RANGE writeRange = { 0, 0 };
+            m_timestampReadbackBuffer->Unmap(0, &writeRange);
+
+            if (m_gpuTimestampFrequency > 0 && endTs > startTs) {
+                double gpuTimeMs = (double)(endTs - startTs) * 1000.0 / (double)m_gpuTimestampFrequency;
+                m_stats.lastGpuTimeMs = gpuTimeMs;
+
+                const double alpha = 0.1;
+                if (m_stats.framesInterpolated == 1) {
+                    m_stats.avgGpuTimeMs = gpuTimeMs;
+                } else {
+                    m_stats.avgGpuTimeMs = alpha * gpuTimeMs + (1.0 - alpha) * m_stats.avgGpuTimeMs;
+                }
+            }
+        }
+    }
 
     // Transition interpolated frame to UAV state if it was left in shader resource state
     if (m_stats.framesInterpolated > 0) {
@@ -454,10 +514,22 @@ bool FrameInterpolation::Dispatch(ID3D12Resource* previousFrame,
     gpuHandle.ptr += m_srvUavDescriptorSize * 3;
     commandList->SetComputeRootDescriptorTable(2, gpuHandle);  // UAV
 
+    // GPU timestamp: start
+    if (m_gpuTimingEnabled) {
+        commandList->EndQuery(m_timestampQueryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, 0);
+    }
+
     // Dispatch compute shader with 16x16 thread groups
     uint32_t dispatchX = (m_config.width + 15) / 16;
     uint32_t dispatchY = (m_config.height + 15) / 16;
     commandList->Dispatch(dispatchX, dispatchY, 1);
+
+    // GPU timestamp: end
+    if (m_gpuTimingEnabled) {
+        commandList->EndQuery(m_timestampQueryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, 1);
+        commandList->ResolveQueryData(m_timestampQueryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP,
+                                       0, 2, m_timestampReadbackBuffer.Get(), 0);
+    }
 
     // Transition interpolated frame from UAV to PIXEL_SHADER_RESOURCE for presentation
     D3D12_RESOURCE_BARRIER barrier = {};

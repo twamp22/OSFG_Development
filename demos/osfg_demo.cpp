@@ -157,6 +157,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 1;
     }
     std::cout << "      Motion vectors: " << opticalFlow.GetMotionVectorWidth() << "x" << opticalFlow.GetMotionVectorHeight() << std::endl;
+    opticalFlow.SetTimestampFrequency(commandQueue.Get());
 
     // ========================================================================
     // Initialize Frame Interpolation
@@ -174,6 +175,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 1;
     }
     std::cout << "      Done." << std::endl;
+    interpolation.SetTimestampFrequency(commandQueue.Get());
 
     // ========================================================================
     // Initialize Presenter
@@ -334,11 +336,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             double avgMs = totalPipelineMs / state.framesProcessed;
 
             if (state.showStats) {
+                auto ofStats = opticalFlow.GetStats();
+                auto interpStats = interpolation.GetStats();
                 std::cout << "\rFPS: " << std::fixed << std::setprecision(1) << fps
                           << " -> " << effectiveFps << " (2x)"
-                          << " | Pipeline: " << std::setprecision(2) << avgMs << "ms"
+                          << " | GPU: OF=" << std::setprecision(2) << ofStats.avgGpuTimeMs << "ms"
+                          << " Int=" << interpStats.avgGpuTimeMs << "ms"
                           << " | Frames: " << state.framesProcessed
-                          << " | Generated: " << state.framesGenerated
                           << "          " << std::flush;
             }
             lastReportTime = now;
