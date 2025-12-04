@@ -530,10 +530,40 @@ bool DualGPUPipeline::PresentFrames() {
     }
 
     int totalFrames = m_frameGenEnabled ? static_cast<int>(m_config.multiplier) : 1;
+    uint32_t syncInterval = m_config.vsync ? 1 : 0;
 
-    // Reset command list for presentation
-    m_computeAllocator->Reset();
-    m_computeCommandList->Reset(m_computeAllocator.Get(), nullptr);
+    // Helper lambda to present and flip a single frame
+    auto presentSingleFrame = [&](ID3D12Resource* frame) -> bool {
+        // Reset command list
+        m_computeAllocator->Reset();
+        m_computeCommandList->Reset(m_computeAllocator.Get(), nullptr);
+
+        // Record copy to back buffer
+        m_presenter->Present(frame, m_computeCommandList.Get());
+
+        // Close and execute
+        m_computeCommandList->Close();
+        ID3D12CommandList* cmdLists[] = { m_computeCommandList.Get() };
+        m_computeQueue->ExecuteCommandLists(1, cmdLists);
+
+        // Wait for execution to complete
+        m_computeFenceValue++;
+        m_computeQueue->Signal(m_computeFence.Get(), m_computeFenceValue);
+        if (m_computeFence->GetCompletedValue() < m_computeFenceValue) {
+            m_computeFence->SetEventOnCompletion(m_computeFenceValue, m_computeFenceEvent);
+            WaitForSingleObject(m_computeFenceEvent, INFINITE);
+        }
+
+        // Flip the swap chain
+        m_presenter->Flip(syncInterval, 0);
+
+        {
+            std::lock_guard<std::mutex> lock(m_statsMutex);
+            m_stats.framesPresented++;
+        }
+
+        return true;
+    };
 
     if (m_frameGenEnabled && m_generatedFrameCount > 0) {
         // Present interleaved: gen0, gen1, ..., real
@@ -544,26 +574,14 @@ bool DualGPUPipeline::PresentFrames() {
             // Present generated frame
             ID3D12Resource* genFrame = m_interpolation->GetInterpolatedFrame();
             if (genFrame) {
-                m_presenter->Present(genFrame, m_computeCommandList.Get());
-            }
-
-            {
-                std::lock_guard<std::mutex> lock(m_statsMutex);
-                m_stats.framesPresented++;
+                presentSingleFrame(genFrame);
             }
         }
     }
 
     // Present the real frame last
     WaitForFramePacing(totalFrames - 1, totalFrames);
-    m_presenter->Present(currentFrame, m_computeCommandList.Get());
-
-    m_computeCommandList->Close();
-
-    {
-        std::lock_guard<std::mutex> lock(m_statsMutex);
-        m_stats.framesPresented++;
-    }
+    presentSingleFrame(currentFrame);
 
     auto endTime = std::chrono::high_resolution_clock::now();
     double presentTimeMs = std::chrono::duration<double, std::milli>(endTime - startTime).count();

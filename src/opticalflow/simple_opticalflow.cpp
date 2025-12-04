@@ -6,8 +6,8 @@
 #include <chrono>
 #include <fstream>
 
-// Embedded shader bytecode (compiled separately)
-// For now, we'll compile at runtime using D3DCompile
+// Optimized Optical Flow Shader
+// Uses shared memory caching and three-step search for better performance
 static const char* g_OpticalFlowShaderSource = R"(
 // Input textures
 Texture2D<float4> g_CurrentFrame : register(t0);
@@ -27,70 +27,162 @@ cbuffer OpticalFlowConstants : register(b0)
     float g_MaxLuminance;
 };
 
+// Shared memory for caching - sized for 8x8 block + 16 pixel search radius on each side
+// Max size: (8 + 32) x (8 + 32) = 40x40 = 1600 floats per frame = 3200 total
+#define TILE_SIZE 8
+#define MAX_SEARCH 16
+#define SHARED_SIZE (TILE_SIZE + MAX_SEARCH * 2)
+groupshared float s_CurrentLum[TILE_SIZE][TILE_SIZE];
+groupshared float s_PreviousLum[SHARED_SIZE][SHARED_SIZE];
+
 float RGBToLuminance(float3 color)
 {
     return dot(color, float3(0.2126, 0.7152, 0.0722));
 }
 
-float ComputeBlockSAD(int2 currentBlockPos, int2 previousBlockPos)
+// Compute SAD between current block (in shared mem) and a region of previous (in shared mem)
+float ComputeSADShared(int2 offset, int searchRadius)
 {
     float sad = 0.0;
+    int baseOffset = searchRadius;  // Offset in shared memory for center
 
-    for (int y = 0; y < 8; y++)
+    [unroll]
+    for (int y = 0; y < TILE_SIZE; y++)
     {
-        for (int x = 0; x < 8; x++)
+        [unroll]
+        for (int x = 0; x < TILE_SIZE; x++)
         {
-            int2 currentPos = currentBlockPos + int2(x, y);
-            int2 previousPos = previousBlockPos + int2(x, y);
-
-            currentPos = clamp(currentPos, int2(0, 0), int2(g_InputSize) - 1);
-            previousPos = clamp(previousPos, int2(0, 0), int2(g_InputSize) - 1);
-
-            float currentLum = RGBToLuminance(g_CurrentFrame[currentPos].rgb);
-            float previousLum = RGBToLuminance(g_PreviousFrame[previousPos].rgb);
-
-            sad += abs(currentLum - previousLum);
+            float currLum = s_CurrentLum[y][x];
+            float prevLum = s_PreviousLum[baseOffset + offset.y + y][baseOffset + offset.x + x];
+            sad += abs(currLum - prevLum);
         }
     }
-
     return sad;
 }
 
-[numthreads(8, 8, 1)]
-void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
+[numthreads(TILE_SIZE, TILE_SIZE, 1)]
+void CSMain(uint3 groupId : SV_GroupID, uint3 threadId : SV_GroupThreadID, uint3 dispatchId : SV_DispatchThreadID)
 {
-    if (dispatchThreadId.x >= g_OutputSize.x || dispatchThreadId.y >= g_OutputSize.y)
+    // Each thread group processes one block
+    int2 blockPos = int2(groupId.xy) * TILE_SIZE;
+    int2 localId = int2(threadId.xy);
+    int localIdx = localId.y * TILE_SIZE + localId.x;
+
+    // Bounds check for output
+    if (groupId.x >= g_OutputSize.x || groupId.y >= g_OutputSize.y)
         return;
 
-    int2 blockPos = int2(dispatchThreadId.xy) * g_BlockSize;
+    int searchRadius = min((int)g_SearchRadius, MAX_SEARCH);
+    int sharedSize = TILE_SIZE + searchRadius * 2;
+
+    // Load current block into shared memory (one pixel per thread)
+    {
+        int2 pixelPos = blockPos + localId;
+        pixelPos = clamp(pixelPos, int2(0, 0), int2(g_InputSize) - 1);
+        s_CurrentLum[localId.y][localId.x] = RGBToLuminance(g_CurrentFrame[pixelPos].rgb);
+    }
+
+    // Load previous frame search region into shared memory
+    // Need to load (TILE_SIZE + 2*searchRadius)^2 pixels with only TILE_SIZE^2 threads
+    int totalPrevPixels = sharedSize * sharedSize;
+    int pixelsPerThread = (totalPrevPixels + TILE_SIZE * TILE_SIZE - 1) / (TILE_SIZE * TILE_SIZE);
+
+    for (int i = 0; i < pixelsPerThread; i++)
+    {
+        int pixelIdx = localIdx + i * (TILE_SIZE * TILE_SIZE);
+        if (pixelIdx < totalPrevPixels)
+        {
+            int sy = pixelIdx / sharedSize;
+            int sx = pixelIdx % sharedSize;
+
+            int2 pixelPos = blockPos + int2(sx, sy) - int2(searchRadius, searchRadius);
+            pixelPos = clamp(pixelPos, int2(0, 0), int2(g_InputSize) - 1);
+
+            s_PreviousLum[sy][sx] = RGBToLuminance(g_PreviousFrame[pixelPos].rgb);
+        }
+    }
+
+    GroupMemoryBarrierWithGroupSync();
+
+    // Only thread 0 performs the search and writes the result
+    if (localIdx != 0)
+        return;
 
     float bestSAD = 1e10;
     int2 bestMotion = int2(0, 0);
 
-    int searchRadius = (int)g_SearchRadius;
+    // Three-Step Search algorithm for fast motion estimation
+    // Step sizes: searchRadius/2, searchRadius/4, 1 (or similar progression)
+    int step = max(searchRadius / 2, 1);
+    int2 center = int2(0, 0);
 
-    for (int dy = -searchRadius; dy <= searchRadius; dy++)
+    while (step >= 1)
     {
-        for (int dx = -searchRadius; dx <= searchRadius; dx++)
+        // Search 9 positions around center at current step size
+        for (int dy = -1; dy <= 1; dy++)
         {
-            int2 searchPos = blockPos + int2(dx, dy);
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                int2 offset = center + int2(dx, dy) * step;
 
-            if (searchPos.x < 0 || searchPos.y < 0 ||
-                searchPos.x + g_BlockSize > g_InputSize.x ||
-                searchPos.y + g_BlockSize > g_InputSize.y)
+                // Bounds check
+                if (offset.x < -searchRadius || offset.x > searchRadius ||
+                    offset.y < -searchRadius || offset.y > searchRadius)
+                    continue;
+
+                // Check if search position is valid in image
+                int2 searchPos = blockPos + offset;
+                if (searchPos.x < 0 || searchPos.y < 0 ||
+                    searchPos.x + TILE_SIZE > (int)g_InputSize.x ||
+                    searchPos.y + TILE_SIZE > (int)g_InputSize.y)
+                    continue;
+
+                float sad = ComputeSADShared(offset, searchRadius);
+
+                if (sad < bestSAD)
+                {
+                    bestSAD = sad;
+                    bestMotion = offset;
+                }
+            }
+        }
+
+        // Move center to best position and reduce step
+        center = bestMotion;
+        step = step / 2;
+    }
+
+    // Final refinement: check immediate neighbors of best position
+    for (int dy = -1; dy <= 1; dy++)
+    {
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            if (dx == 0 && dy == 0) continue;
+
+            int2 offset = bestMotion + int2(dx, dy);
+
+            if (offset.x < -searchRadius || offset.x > searchRadius ||
+                offset.y < -searchRadius || offset.y > searchRadius)
                 continue;
 
-            float sad = ComputeBlockSAD(blockPos, searchPos);
+            int2 searchPos = blockPos + offset;
+            if (searchPos.x < 0 || searchPos.y < 0 ||
+                searchPos.x + TILE_SIZE > (int)g_InputSize.x ||
+                searchPos.y + TILE_SIZE > (int)g_InputSize.y)
+                continue;
+
+            float sad = ComputeSADShared(offset, searchRadius);
 
             if (sad < bestSAD)
             {
                 bestSAD = sad;
-                bestMotion = int2(dx, dy);
+                bestMotion = offset;
             }
         }
     }
 
-    g_MotionVectors[dispatchThreadId.xy] = bestMotion * 16;
+    // Write result (scaled by 16 for sub-pixel precision)
+    g_MotionVectors[groupId.xy] = bestMotion * 16;
 }
 )";
 
@@ -398,21 +490,44 @@ bool SimpleOpticalFlow::Dispatch(ID3D12Resource* currentFrame,
 
     auto startTime = std::chrono::high_resolution_clock::now();
 
-    // Create SRVs for input textures
-    D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = m_srvUavHeap->GetCPUDescriptorHandleForHeapStart();
+    // Transition motion vector texture back to UAV state if it was left in shader resource state
+    // (from previous frame's interpolation read)
+    if (m_stats.framesProcessed > 0) {
+        D3D12_RESOURCE_BARRIER barrier = {};
+        barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        barrier.Transition.pResource = m_motionVectorTexture.Get();
+        barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+        barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+        barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+        commandList->ResourceBarrier(1, &barrier);
+    }
 
-    // Current frame SRV
-    D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-    srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; // Assuming BGRA input
-    srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-    srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-    srvDesc.Texture2D.MipLevels = 1;
+    // Only recreate SRVs if textures changed (descriptor caching)
+    bool needsDescriptorUpdate = !m_descriptorsValid ||
+                                  m_cachedCurrentFrame != currentFrame ||
+                                  m_cachedPreviousFrame != previousFrame;
 
-    m_device->CreateShaderResourceView(currentFrame, &srvDesc, srvHandle);
+    if (needsDescriptorUpdate) {
+        D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = m_srvUavHeap->GetCPUDescriptorHandleForHeapStart();
 
-    // Previous frame SRV
-    srvHandle.ptr += m_srvUavDescriptorSize;
-    m_device->CreateShaderResourceView(previousFrame, &srvDesc, srvHandle);
+        // Current frame SRV - use the actual texture format
+        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+        srvDesc.Format = currentFrame->GetDesc().Format;
+        srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+        srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+        srvDesc.Texture2D.MipLevels = 1;
+
+        m_device->CreateShaderResourceView(currentFrame, &srvDesc, srvHandle);
+
+        // Previous frame SRV - use its actual format
+        srvHandle.ptr += m_srvUavDescriptorSize;
+        srvDesc.Format = previousFrame->GetDesc().Format;
+        m_device->CreateShaderResourceView(previousFrame, &srvDesc, srvHandle);
+
+        m_cachedCurrentFrame = currentFrame;
+        m_cachedPreviousFrame = previousFrame;
+        m_descriptorsValid = true;
+    }
 
     // Set pipeline state and root signature
     commandList->SetComputeRootSignature(m_rootSignature.Get());
@@ -431,10 +546,18 @@ bool SimpleOpticalFlow::Dispatch(ID3D12Resource* currentFrame,
     gpuHandle.ptr += 2 * m_srvUavDescriptorSize;
     commandList->SetComputeRootDescriptorTable(2, gpuHandle); // UAV
 
-    // Dispatch
-    uint32_t threadGroupsX = (m_mvWidth + 7) / 8;
-    uint32_t threadGroupsY = (m_mvHeight + 7) / 8;
-    commandList->Dispatch(threadGroupsX, threadGroupsY, 1);
+    // Dispatch - one thread group per block (each group is 8x8 threads working together)
+    commandList->Dispatch(m_mvWidth, m_mvHeight, 1);
+
+    // Transition motion vector texture from UAV to PIXEL_SHADER_RESOURCE
+    // so interpolation can read it
+    D3D12_RESOURCE_BARRIER barrier = {};
+    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    barrier.Transition.pResource = m_motionVectorTexture.Get();
+    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+    barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+    commandList->ResourceBarrier(1, &barrier);
 
     // Update stats
     auto endTime = std::chrono::high_resolution_clock::now();

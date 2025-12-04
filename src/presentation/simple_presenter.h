@@ -65,10 +65,14 @@ public:
     bool ProcessMessages();
 
     // Present a frame
-    // sourceTexture: The texture to display (must be in PIXEL_SHADER_RESOURCE state)
-    // commandList: Command list to record copy commands
+    // sourceTexture: The texture to display (must be in PIXEL_SHADER_RESOURCE or COPY_SOURCE state)
+    // commandList: Command list to record copy commands (will be closed and executed)
     bool Present(ID3D12Resource* sourceTexture,
                  ID3D12GraphicsCommandList* commandList);
+
+    // Execute swap chain present and advance to next frame
+    // Call this after executing the command list from Present()
+    bool Flip(uint32_t syncInterval = 1, uint32_t flags = 0);
 
     // Get current back buffer for rendering
     ID3D12Resource* GetCurrentBackBuffer();

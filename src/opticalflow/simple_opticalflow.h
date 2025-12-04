@@ -104,6 +104,11 @@ private:
     SimpleOpticalFlowStats m_stats;
     std::string m_lastError;
 
+    // Cached texture pointers for descriptor caching
+    ID3D12Resource* m_cachedCurrentFrame = nullptr;
+    ID3D12Resource* m_cachedPreviousFrame = nullptr;
+    bool m_descriptorsValid = false;
+
     // Constant buffer data
     struct ConstantBufferData {
         uint32_t inputWidth;

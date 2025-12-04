@@ -106,6 +106,12 @@ private:
     FrameInterpolationStats m_stats;
     std::string m_lastError;
 
+    // Cached texture pointers for descriptor caching
+    ID3D12Resource* m_cachedPrevFrame = nullptr;
+    ID3D12Resource* m_cachedCurrFrame = nullptr;
+    ID3D12Resource* m_cachedMotionVectors = nullptr;
+    bool m_descriptorsValid = false;
+
     // Constant buffer data (must match shader)
     struct ConstantBufferData {
         uint32_t width;

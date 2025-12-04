@@ -275,6 +275,30 @@ target_link_libraries(test_dxgi_capture PRIVATE
     osfg_capture
 )
 
+# Capture Display Test (minimal test for debugging)
+add_executable(test_capture_display
+    tests/test_capture_display.cpp
+)
+
+target_link_libraries(test_capture_display PRIVATE
+    osfg_capture
+    d3d12.lib
+    dxgi.lib
+)
+
+# Interop Display Test (tests interop + presenter)
+add_executable(test_interop_display
+    tests/test_interop_display.cpp
+)
+
+target_link_libraries(test_interop_display PRIVATE
+    osfg_capture
+    osfg_interop
+    osfg_presentation
+    d3d12.lib
+    dxgi.lib
+)
+
 # Simple Optical Flow Test (Phase 1)
 add_executable(test_simple_opticalflow
     tests/test_simple_opticalflow.cpp
@@ -320,6 +344,17 @@ target_link_libraries(osfg_demo PRIVATE
     osfg_simple_opticalflow
     osfg_interop
     osfg_interpolation
+    osfg_presentation
+)
+
+# Simple Demo (no frame generation - for debugging)
+add_executable(osfg_demo_simple WIN32
+    demos/osfg_demo_simple.cpp
+)
+
+target_link_libraries(osfg_demo_simple PRIVATE
+    osfg_capture
+    osfg_interop
     osfg_presentation
 )
 
@@ -379,6 +414,39 @@ target_include_directories(test_ffx_framegen PRIVATE
 
 target_link_libraries(test_ffx_framegen PRIVATE
     osfg_ffx_framegen
+)
+
+# Init Only Test (diagnoses if initialization breaks display)
+add_executable(test_init_only
+    tests/test_init_only.cpp
+)
+
+target_include_directories(test_init_only PRIVATE
+    ${DIRECTX_HEADERS_INCLUDE}
+)
+
+target_link_libraries(test_init_only PRIVATE
+    osfg_capture
+    osfg_interop
+    osfg_simple_opticalflow
+    osfg_interpolation
+    osfg_presentation
+)
+
+# Optical Flow Only Test (diagnoses if optical flow dispatch causes freeze)
+add_executable(test_opticalflow_only
+    tests/test_opticalflow_only.cpp
+)
+
+target_include_directories(test_opticalflow_only PRIVATE
+    ${DIRECTX_HEADERS_INCLUDE}
+)
+
+target_link_libraries(test_opticalflow_only PRIVATE
+    osfg_capture
+    osfg_interop
+    osfg_simple_opticalflow
+    osfg_presentation
 )
 
 # ============================================================================

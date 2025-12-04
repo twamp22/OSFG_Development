@@ -104,6 +104,10 @@ private:
     HANDLE m_copyFenceEvent = nullptr;
     UINT64 m_copyFenceValue = 0;
 
+    // Cached D3D11 staging texture for external device copies
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> m_cachedStagingTexture;
+    Microsoft::WRL::ComPtr<ID3D11Device> m_cachedStagingDevice;  // Device that owns the staging texture
+
     // State
     InteropConfig m_config;
     bool m_initialized = false;

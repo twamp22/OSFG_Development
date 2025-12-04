@@ -103,32 +103,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     std::cout << "      Done." << std::endl;
 
     // ========================================================================
-    // Initialize D3D11-D3D12 Interop (creates D3D11On12 device)
+    // Initialize DXGI Capture FIRST (to get actual screen dimensions)
     // ========================================================================
-    std::cout << "[2/7] Initializing D3D11-D3D12 interop..." << std::endl;
-    OSFG::D3D11D3D12Interop interop;
-    OSFG::InteropConfig interopConfig;
-    interopConfig.width = 1920;  // Will be updated after capture init
-    interopConfig.height = 1080;
-    interopConfig.format = DXGI_FORMAT_B8G8R8A8_UNORM;
-
-    if (!interop.Initialize(d3d12Device.Get(), commandQueue.Get(), interopConfig)) {
-        MessageBoxW(nullptr, L"Failed to initialize D3D11-D3D12 interop", L"OSFG Error", MB_OK | MB_ICONERROR);
-        return 1;
-    }
-    std::cout << "      Done." << std::endl;
-
-    // ========================================================================
-    // Initialize DXGI Capture (using interop's D3D11 device)
-    // ========================================================================
-    std::cout << "[3/7] Initializing DXGI capture..." << std::endl;
+    std::cout << "[2/7] Initializing DXGI capture..." << std::endl;
     osfg::DXGICapture capture;
     osfg::CaptureConfig captureConfig;
     captureConfig.outputIndex = 0;
     captureConfig.timeoutMs = 100;
 
-    // Use capture's own D3D11 device (Desktop Duplication can't use D3D11On12)
-    // We'll use staged copy for cross-device texture transfer
     if (!capture.Initialize(captureConfig)) {
         std::wstring msg = L"Failed to initialize DXGI capture.\n\nError: ";
         std::wstringstream ss;
@@ -144,6 +126,22 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     std::cout << "      Resolution: " << captureWidth << "x" << captureHeight << std::endl;
 
     // ========================================================================
+    // Initialize D3D11-D3D12 Interop (using actual capture dimensions)
+    // ========================================================================
+    std::cout << "[3/7] Initializing D3D11-D3D12 interop..." << std::endl;
+    OSFG::D3D11D3D12Interop interop;
+    OSFG::InteropConfig interopConfig;
+    interopConfig.width = captureWidth;
+    interopConfig.height = captureHeight;
+    interopConfig.format = DXGI_FORMAT_B8G8R8A8_UNORM;
+
+    if (!interop.Initialize(d3d12Device.Get(), commandQueue.Get(), interopConfig)) {
+        MessageBoxW(nullptr, L"Failed to initialize D3D11-D3D12 interop", L"OSFG Error", MB_OK | MB_ICONERROR);
+        return 1;
+    }
+    std::cout << "      Done." << std::endl;
+
+    // ========================================================================
     // Initialize Optical Flow
     // ========================================================================
     std::cout << "[4/7] Initializing optical flow..." << std::endl;
@@ -152,7 +150,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     ofConfig.width = captureWidth;
     ofConfig.height = captureHeight;
     ofConfig.blockSize = 8;
-    ofConfig.searchRadius = 16;
+    ofConfig.searchRadius = 16;  // Three-step search makes larger radius efficient (~36 positions vs 1089)
 
     if (!opticalFlow.Initialize(d3d12Device.Get(), ofConfig)) {
         MessageBoxW(nullptr, L"Failed to initialize optical flow", L"OSFG Error", MB_OK | MB_ICONERROR);
@@ -168,7 +166,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     OSFG::FrameInterpolationConfig interpConfig;
     interpConfig.width = captureWidth;
     interpConfig.height = captureHeight;
-    interpConfig.format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    interpConfig.format = DXGI_FORMAT_B8G8R8A8_UNORM;  // Must match interop/capture format
     interpConfig.interpolationFactor = 0.5f;
 
     if (!interpolation.Initialize(d3d12Device.Get(), interpConfig)) {
@@ -183,10 +181,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     std::cout << "[6/7] Creating presentation window..." << std::endl;
     OSFG::SimplePresenter presenter;
     OSFG::PresenterConfig presenterConfig;
-    presenterConfig.width = captureWidth;
-    presenterConfig.height = captureHeight;
+    // Cap window size to avoid issues with very large screens
+    presenterConfig.width = captureWidth > 1280 ? 1280 : captureWidth;
+    presenterConfig.height = captureHeight > 720 ? 720 : captureHeight;
     presenterConfig.bufferCount = 2;
-    presenterConfig.vsync = false;
+    presenterConfig.vsync = true;
     presenterConfig.windowTitle = L"OSFG Frame Generation Demo";
 
     if (!presenter.Initialize(d3d12Device.Get(), commandQueue.Get(), presenterConfig)) {
@@ -314,6 +313,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
         // Wait for GPU
         WaitForGPU(commandQueue.Get(), fence.Get(), fenceEvent, fenceValue);
+
+        // Flip the swap chain to display the frame
+        presenter.Flip(1, 0);
 
         // Swap buffers
         interop.SwapBuffers();

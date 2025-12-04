@@ -74,6 +74,10 @@ void D3D11D3D12Interop::Shutdown()
         m_d3d12Textures[i].Reset();
     }
 
+    // Release cached staging texture
+    m_cachedStagingTexture.Reset();
+    m_cachedStagingDevice.Reset();
+
     // Release copy resources
     if (m_copyFenceEvent) {
         CloseHandle(m_copyFenceEvent);
@@ -323,26 +327,28 @@ bool D3D11D3D12Interop::CopyFromD3D11Staged(ID3D11Device* srcDevice,
     D3D11_TEXTURE2D_DESC srcDesc;
     srcTexture->GetDesc(&srcDesc);
 
-    // Create a staging texture on the source device if needed
-    Microsoft::WRL::ComPtr<ID3D11Texture2D> stagingTexture;
-    D3D11_TEXTURE2D_DESC stagingDesc = srcDesc;
-    stagingDesc.Usage = D3D11_USAGE_STAGING;
-    stagingDesc.BindFlags = 0;
-    stagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-    stagingDesc.MiscFlags = 0;
+    // Create or reuse staging texture (only recreate if device changed or doesn't exist)
+    if (!m_cachedStagingTexture || m_cachedStagingDevice.Get() != srcDevice) {
+        D3D11_TEXTURE2D_DESC stagingDesc = srcDesc;
+        stagingDesc.Usage = D3D11_USAGE_STAGING;
+        stagingDesc.BindFlags = 0;
+        stagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+        stagingDesc.MiscFlags = 0;
 
-    HRESULT hr = srcDevice->CreateTexture2D(&stagingDesc, nullptr, &stagingTexture);
-    if (FAILED(hr)) {
-        m_lastError = "Failed to create staging texture";
-        return false;
+        HRESULT hr = srcDevice->CreateTexture2D(&stagingDesc, nullptr, &m_cachedStagingTexture);
+        if (FAILED(hr)) {
+            m_lastError = "Failed to create staging texture";
+            return false;
+        }
+        m_cachedStagingDevice = srcDevice;
     }
 
     // Copy source to staging
-    srcContext->CopyResource(stagingTexture.Get(), srcTexture);
+    srcContext->CopyResource(m_cachedStagingTexture.Get(), srcTexture);
 
     // Map staging texture
     D3D11_MAPPED_SUBRESOURCE mapped;
-    hr = srcContext->Map(stagingTexture.Get(), 0, D3D11_MAP_READ, 0, &mapped);
+    HRESULT hr = srcContext->Map(m_cachedStagingTexture.Get(), 0, D3D11_MAP_READ, 0, &mapped);
     if (FAILED(hr)) {
         m_lastError = "Failed to map staging texture";
         return false;
@@ -359,7 +365,7 @@ bool D3D11D3D12Interop::CopyFromD3D11Staged(ID3D11Device* srcDevice,
         memcpy(dstPtr + y * m_uploadRowPitch, srcPtr + y * srcRowPitch, m_config.width * bytesPerPixel);
     }
 
-    srcContext->Unmap(stagingTexture.Get(), 0);
+    srcContext->Unmap(m_cachedStagingTexture.Get(), 0);
 
     // Now copy from upload buffer to the D3D12 texture using our internal command list
     m_copyCommandAllocator->Reset();

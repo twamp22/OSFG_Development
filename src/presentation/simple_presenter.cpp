@@ -119,14 +119,24 @@ bool SimplePresenter::Present(ID3D12Resource* sourceTexture,
     // Get current back buffer
     ID3D12Resource* backBuffer = m_backBuffers[m_frameIndex].Get();
 
-    // Transition back buffer to copy dest
-    D3D12_RESOURCE_BARRIER barrier = {};
-    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    barrier.Transition.pResource = backBuffer;
-    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
-    barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-    commandList->ResourceBarrier(1, &barrier);
+    // Transition source texture to copy source and back buffer to copy dest
+    D3D12_RESOURCE_BARRIER barriers[2] = {};
+
+    // Source texture: PIXEL_SHADER_RESOURCE/COMMON -> COPY_SOURCE
+    barriers[0].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    barriers[0].Transition.pResource = sourceTexture;
+    barriers[0].Transition.StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+    barriers[0].Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
+    barriers[0].Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
+    // Back buffer: PRESENT -> COPY_DEST
+    barriers[1].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    barriers[1].Transition.pResource = backBuffer;
+    barriers[1].Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+    barriers[1].Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
+    barriers[1].Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
+    commandList->ResourceBarrier(2, barriers);
 
     // Copy source texture to back buffer
     D3D12_TEXTURE_COPY_LOCATION destLoc = {};
@@ -149,10 +159,16 @@ bool SimplePresenter::Present(ID3D12Resource* sourceTexture,
 
     commandList->CopyTextureRegion(&destLoc, 0, 0, 0, &srcLoc, &srcBox);
 
-    // Transition back buffer to present
-    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-    commandList->ResourceBarrier(1, &barrier);
+    // Transition both textures back
+    // Source texture: COPY_SOURCE -> PIXEL_SHADER_RESOURCE
+    barriers[0].Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
+    barriers[0].Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+
+    // Back buffer: COPY_DEST -> PRESENT
+    barriers[1].Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+    barriers[1].Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+
+    commandList->ResourceBarrier(2, barriers);
 
     return true;
 }
@@ -160,6 +176,64 @@ bool SimplePresenter::Present(ID3D12Resource* sourceTexture,
 ID3D12Resource* SimplePresenter::GetCurrentBackBuffer()
 {
     return m_backBuffers[m_frameIndex].Get();
+}
+
+bool SimplePresenter::Flip(uint32_t syncInterval, uint32_t flags)
+{
+    if (!m_initialized || !m_swapChain) {
+        m_lastError = "Not initialized";
+        return false;
+    }
+
+    // Present the frame
+    UINT presentFlags = flags;
+    if (!m_config.vsync && syncInterval == 0) {
+        presentFlags |= DXGI_PRESENT_ALLOW_TEARING;
+    }
+
+    HRESULT hr = m_swapChain->Present(m_config.vsync ? 1 : syncInterval, presentFlags);
+    if (FAILED(hr)) {
+        if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET) {
+            m_lastError = "Device lost during present";
+        } else {
+            m_lastError = "Present failed: 0x" + std::to_string(hr);
+        }
+        return false;
+    }
+
+    // Update statistics
+    LARGE_INTEGER currentTime;
+    QueryPerformanceCounter(&currentTime);
+    double presentTimeMs = 1000.0 * (currentTime.QuadPart - m_lastPresentTime.QuadPart) / m_frequency.QuadPart;
+    m_lastPresentTime = currentTime;
+
+    m_stats.lastPresentTimeMs = presentTimeMs;
+    m_stats.framesPresented++;
+
+    // Running average for FPS
+    double alpha = 0.1;
+    m_stats.avgPresentTimeMs = m_stats.avgPresentTimeMs * (1.0 - alpha) + presentTimeMs * alpha;
+    if (m_stats.avgPresentTimeMs > 0) {
+        m_stats.fps = 1000.0 / m_stats.avgPresentTimeMs;
+    }
+
+    // Schedule signal for fence
+    const UINT64 currentFenceValue = m_fenceValues[m_frameIndex];
+    m_commandQueue->Signal(m_fence.Get(), currentFenceValue);
+
+    // Move to next frame
+    m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+
+    // Wait for next frame to be available
+    if (m_fence->GetCompletedValue() < m_fenceValues[m_frameIndex]) {
+        m_fence->SetEventOnCompletion(m_fenceValues[m_frameIndex], m_fenceEvent);
+        WaitForSingleObject(m_fenceEvent, INFINITE);
+    }
+
+    // Set fence value for next frame
+    m_fenceValues[m_frameIndex] = currentFenceValue + 1;
+
+    return true;
 }
 
 bool SimplePresenter::CreatePresenterWindow()
@@ -234,7 +308,7 @@ bool SimplePresenter::CreateSwapChain()
     DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
     swapChainDesc.Width = m_config.width;
     swapChainDesc.Height = m_config.height;
-    swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    swapChainDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
     swapChainDesc.Stereo = FALSE;
     swapChainDesc.SampleDesc.Count = 1;
     swapChainDesc.SampleDesc.Quality = 0;

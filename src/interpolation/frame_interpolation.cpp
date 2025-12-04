@@ -7,9 +7,10 @@
 
 namespace OSFG {
 
-// Embedded HLSL shader for frame interpolation
+// Optimized HLSL shader for frame interpolation
+// Uses 16x16 thread groups and simplified motion vector lookup for better performance
 static const char* g_frameInterpolationShader = R"(
-// Frame Interpolation Compute Shader
+// Frame Interpolation Compute Shader - Optimized Version
 // Uses bi-directional motion compensation to blend frames
 
 cbuffer Constants : register(b0)
@@ -34,109 +35,40 @@ RWTexture2D<float4> g_InterpolatedFrame : register(u0);
 // Samplers
 SamplerState g_LinearSampler : register(s0);
 
-// Convert pixel coordinates to UV
-float2 PixelToUV(int2 pixel, uint2 size)
-{
-    return (float2(pixel) + 0.5) / float2(size);
-}
-
-// Sample motion vector at UV coordinates (with interpolation)
-float2 SampleMotionVector(float2 uv)
-{
-    // Convert UV to motion vector texture coordinates
-    float2 mvCoord = uv * float2(g_MVWidth, g_MVHeight) - 0.5;
-    int2 mvPixel = int2(floor(mvCoord));
-    float2 frac_part = frac(mvCoord);
-
-    // Clamp to valid range
-    mvPixel = clamp(mvPixel, int2(0, 0), int2(g_MVWidth - 1, g_MVHeight - 1));
-    int2 mvPixel1 = clamp(mvPixel + int2(1, 0), int2(0, 0), int2(g_MVWidth - 1, g_MVHeight - 1));
-    int2 mvPixel2 = clamp(mvPixel + int2(0, 1), int2(0, 0), int2(g_MVWidth - 1, g_MVHeight - 1));
-    int2 mvPixel3 = clamp(mvPixel + int2(1, 1), int2(0, 0), int2(g_MVWidth - 1, g_MVHeight - 1));
-
-    // Sample 4 neighboring motion vectors
-    float2 mv00 = float2(g_MotionVectors[mvPixel]) * g_MotionScale;
-    float2 mv10 = float2(g_MotionVectors[mvPixel1]) * g_MotionScale;
-    float2 mv01 = float2(g_MotionVectors[mvPixel2]) * g_MotionScale;
-    float2 mv11 = float2(g_MotionVectors[mvPixel3]) * g_MotionScale;
-
-    // Bilinear interpolation
-    float2 mv0 = lerp(mv00, mv10, frac_part.x);
-    float2 mv1 = lerp(mv01, mv11, frac_part.x);
-    return lerp(mv0, mv1, frac_part.y);
-}
-
-// Check if UV is within valid range
-bool IsValidUV(float2 uv)
-{
-    return all(uv >= 0.0) && all(uv <= 1.0);
-}
-
-[numthreads(8, 8, 1)]
+[numthreads(16, 16, 1)]
 void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
 {
     // Check bounds
     if (dispatchThreadId.x >= g_Width || dispatchThreadId.y >= g_Height)
         return;
 
-    int2 pixel = int2(dispatchThreadId.xy);
-    float2 uv = PixelToUV(pixel, uint2(g_Width, g_Height));
+    uint2 pixel = dispatchThreadId.xy;
+    float2 uv = (float2(pixel) + 0.5) / float2(g_Width, g_Height);
 
-    // Get motion vector at this location
-    // Motion vectors point from previous frame to current frame
-    float2 motion = SampleMotionVector(uv);
+    // Get motion vector at this location using nearest neighbor (faster than bilinear)
+    // Map pixel to MV coordinates
+    uint2 mvPixel = uint2(uv * float2(g_MVWidth, g_MVHeight));
+    mvPixel = min(mvPixel, uint2(g_MVWidth - 1, g_MVHeight - 1));
 
-    // Convert motion from pixels to UV space
+    float2 motion = float2(g_MotionVectors[mvPixel]) * g_MotionScale;
     float2 motionUV = motion / float2(g_Width, g_Height);
 
-    // Bi-directional warping:
-    // - Sample previous frame at position warped forward by (1-t)*motion
-    // - Sample current frame at position warped backward by t*motion
     float t = g_InterpolationFactor;
 
-    // Forward warp from previous frame
+    // Bi-directional warping
     float2 uvPrev = uv - motionUV * (1.0 - t);
-
-    // Backward warp from current frame
     float2 uvCurr = uv + motionUV * t;
 
-    // Sample both frames
-    float4 colorPrev = float4(0, 0, 0, 0);
-    float4 colorCurr = float4(0, 0, 0, 0);
-    float weightPrev = 0.0;
-    float weightCurr = 0.0;
+    // Clamp UVs to valid range
+    uvPrev = saturate(uvPrev);
+    uvCurr = saturate(uvCurr);
 
-    // Sample previous frame if UV is valid
-    if (IsValidUV(uvPrev))
-    {
-        colorPrev = g_PreviousFrame.SampleLevel(g_LinearSampler, uvPrev, 0);
-        weightPrev = 1.0 - t;
-    }
+    // Sample both frames with hardware linear filtering
+    float4 colorPrev = g_PreviousFrame.SampleLevel(g_LinearSampler, uvPrev, 0);
+    float4 colorCurr = g_CurrentFrame.SampleLevel(g_LinearSampler, uvCurr, 0);
 
-    // Sample current frame if UV is valid
-    if (IsValidUV(uvCurr))
-    {
-        colorCurr = g_CurrentFrame.SampleLevel(g_LinearSampler, uvCurr, 0);
-        weightCurr = t;
-    }
-
-    // Blend based on weights
-    float totalWeight = weightPrev + weightCurr;
-    float4 result;
-
-    if (totalWeight > 0.0)
-    {
-        result = (colorPrev * weightPrev + colorCurr * weightCurr) / totalWeight;
-    }
-    else
-    {
-        // Fallback: use linear blend of unwarped samples
-        float4 prev = g_PreviousFrame.SampleLevel(g_LinearSampler, uv, 0);
-        float4 curr = g_CurrentFrame.SampleLevel(g_LinearSampler, uv, 0);
-        result = lerp(prev, curr, t);
-    }
-
-    // Ensure alpha is 1
+    // Simple weighted blend
+    float4 result = colorPrev * (1.0 - t) + colorCurr * t;
     result.a = 1.0;
 
     g_InterpolatedFrame[pixel] = result;
@@ -431,6 +363,17 @@ bool FrameInterpolation::Dispatch(ID3D12Resource* previousFrame,
 
     auto startTime = std::chrono::high_resolution_clock::now();
 
+    // Transition interpolated frame to UAV state if it was left in shader resource state
+    if (m_stats.framesInterpolated > 0) {
+        D3D12_RESOURCE_BARRIER barrier = {};
+        barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        barrier.Transition.pResource = m_interpolatedFrame.Get();
+        barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+        barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+        barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+        commandList->ResourceBarrier(1, &barrier);
+    }
+
     // Get motion vector dimensions from resource
     D3D12_RESOURCE_DESC mvDesc = motionVectors->GetDesc();
     uint32_t mvWidth = static_cast<uint32_t>(mvDesc.Width);
@@ -443,7 +386,7 @@ bool FrameInterpolation::Dispatch(ID3D12Resource* previousFrame,
     cbData.mvWidth = mvWidth;
     cbData.mvHeight = mvHeight;
     cbData.interpolationFactor = m_config.interpolationFactor;
-    cbData.motionScale = 1.0f / 16.0f;  // Motion vectors are scaled by 16
+    cbData.motionScale = 1.0f / 16.0f;
 
     void* mappedData;
     D3D12_RANGE readRange = { 0, 0 };
@@ -453,33 +396,46 @@ bool FrameInterpolation::Dispatch(ID3D12Resource* previousFrame,
         m_constantBuffer->Unmap(0, nullptr);
     }
 
-    // Create SRVs and UAV
-    D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = m_srvUavHeap->GetCPUDescriptorHandleForHeapStart();
+    // Only recreate descriptors if textures changed (major performance optimization)
+    bool needsDescriptorUpdate = !m_descriptorsValid ||
+                                  m_cachedPrevFrame != previousFrame ||
+                                  m_cachedCurrFrame != currentFrame ||
+                                  m_cachedMotionVectors != motionVectors;
 
-    // SRV for previous frame
-    D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-    srvDesc.Format = previousFrame->GetDesc().Format;
-    srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-    srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-    srvDesc.Texture2D.MipLevels = 1;
-    m_device->CreateShaderResourceView(previousFrame, &srvDesc, cpuHandle);
+    if (needsDescriptorUpdate) {
+        D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = m_srvUavHeap->GetCPUDescriptorHandleForHeapStart();
 
-    // SRV for current frame
-    cpuHandle.ptr += m_srvUavDescriptorSize;
-    srvDesc.Format = currentFrame->GetDesc().Format;
-    m_device->CreateShaderResourceView(currentFrame, &srvDesc, cpuHandle);
+        // SRV for previous frame
+        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+        srvDesc.Format = previousFrame->GetDesc().Format;
+        srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+        srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+        srvDesc.Texture2D.MipLevels = 1;
+        m_device->CreateShaderResourceView(previousFrame, &srvDesc, cpuHandle);
 
-    // SRV for motion vectors (R16G16_SINT)
-    cpuHandle.ptr += m_srvUavDescriptorSize;
-    srvDesc.Format = DXGI_FORMAT_R16G16_SINT;
-    m_device->CreateShaderResourceView(motionVectors, &srvDesc, cpuHandle);
+        // SRV for current frame
+        cpuHandle.ptr += m_srvUavDescriptorSize;
+        srvDesc.Format = currentFrame->GetDesc().Format;
+        m_device->CreateShaderResourceView(currentFrame, &srvDesc, cpuHandle);
 
-    // UAV for output
-    cpuHandle.ptr += m_srvUavDescriptorSize;
-    D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
-    uavDesc.Format = m_config.format;
-    uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
-    m_device->CreateUnorderedAccessView(m_interpolatedFrame.Get(), nullptr, &uavDesc, cpuHandle);
+        // SRV for motion vectors (R16G16_SINT)
+        cpuHandle.ptr += m_srvUavDescriptorSize;
+        srvDesc.Format = DXGI_FORMAT_R16G16_SINT;
+        m_device->CreateShaderResourceView(motionVectors, &srvDesc, cpuHandle);
+
+        // UAV for output
+        cpuHandle.ptr += m_srvUavDescriptorSize;
+        D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+        uavDesc.Format = m_config.format;
+        uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+        m_device->CreateUnorderedAccessView(m_interpolatedFrame.Get(), nullptr, &uavDesc, cpuHandle);
+
+        // Cache the texture pointers
+        m_cachedPrevFrame = previousFrame;
+        m_cachedCurrFrame = currentFrame;
+        m_cachedMotionVectors = motionVectors;
+        m_descriptorsValid = true;
+    }
 
     // Set pipeline state
     commandList->SetComputeRootSignature(m_rootSignature.Get());
@@ -498,10 +454,19 @@ bool FrameInterpolation::Dispatch(ID3D12Resource* previousFrame,
     gpuHandle.ptr += m_srvUavDescriptorSize * 3;
     commandList->SetComputeRootDescriptorTable(2, gpuHandle);  // UAV
 
-    // Dispatch compute shader
-    uint32_t dispatchX = (m_config.width + 7) / 8;
-    uint32_t dispatchY = (m_config.height + 7) / 8;
+    // Dispatch compute shader with 16x16 thread groups
+    uint32_t dispatchX = (m_config.width + 15) / 16;
+    uint32_t dispatchY = (m_config.height + 15) / 16;
     commandList->Dispatch(dispatchX, dispatchY, 1);
+
+    // Transition interpolated frame from UAV to PIXEL_SHADER_RESOURCE for presentation
+    D3D12_RESOURCE_BARRIER barrier = {};
+    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    barrier.Transition.pResource = m_interpolatedFrame.Get();
+    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+    barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+    commandList->ResourceBarrier(1, &barrier);
 
     // Update statistics
     auto endTime = std::chrono::high_resolution_clock::now();
