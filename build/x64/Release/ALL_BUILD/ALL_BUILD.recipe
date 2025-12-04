@@ -8,6 +8,12 @@
       <FullPath>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\bin\Release\osfg_demo.exe</FullPath>
     </ProjectOutput>
     <ProjectOutput>
+      <FullPath>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\bin\Release\osfg_demo_simple.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\bin\Release\test_capture_display.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
       <FullPath>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\bin\Release\test_dual_gpu_pipeline.exe</FullPath>
     </ProjectOutput>
     <ProjectOutput>
@@ -24,6 +30,15 @@
     </ProjectOutput>
     <ProjectOutput>
       <FullPath>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\bin\Release\test_fsr_opticalflow.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\bin\Release\test_init_only.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\bin\Release\test_interop_display.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\bin\Release\test_opticalflow_only.exe</FullPath>
     </ProjectOutput>
     <ProjectOutput>
       <FullPath>C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\bin\Release\test_simple_opticalflow.exe</FullPath>

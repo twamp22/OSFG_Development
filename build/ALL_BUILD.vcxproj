@@ -186,6 +186,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <Project>{2B94B2D1-12B7-3812-96AA-C9B36C59A5AF}</Project>
       <Name>osfg_demo</Name>
     </ProjectReference>
+    <ProjectReference Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\osfg_demo_simple.vcxproj">
+      <Project>{9EF712F5-E146-3619-8AB4-9E860B579A0D}</Project>
+      <Name>osfg_demo_simple</Name>
+    </ProjectReference>
     <ProjectReference Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\osfg_ffx_framegen.vcxproj">
       <Project>{EBB24419-356A-3AD1-A243-BDC2F25D3335}</Project>
       <Name>osfg_ffx_framegen</Name>
@@ -222,6 +226,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <Project>{65F6FC5A-8112-390E-A4F9-6AC3F0D42B9B}</Project>
       <Name>osfg_transfer</Name>
     </ProjectReference>
+    <ProjectReference Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\test_capture_display.vcxproj">
+      <Project>{C2571C53-F0DC-3F1D-B7B9-A7A4F697D8AE}</Project>
+      <Name>test_capture_display</Name>
+    </ProjectReference>
     <ProjectReference Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\test_dual_gpu_pipeline.vcxproj">
       <Project>{27388906-EE2C-3E9C-8562-DB64E6748296}</Project>
       <Name>test_dual_gpu_pipeline</Name>
@@ -245,6 +253,18 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ProjectReference Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\test_fsr_opticalflow.vcxproj">
       <Project>{81317CE6-B0D6-3B76-81B7-679A345762D8}</Project>
       <Name>test_fsr_opticalflow</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\test_init_only.vcxproj">
+      <Project>{2AA380E7-A300-38F7-A4E2-63A73B523C93}</Project>
+      <Name>test_init_only</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\test_interop_display.vcxproj">
+      <Project>{73D524BC-6F70-3A29-B57C-EB2E68B912F0}</Project>
+      <Name>test_interop_display</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\test_opticalflow_only.vcxproj">
+      <Project>{22041F08-B32D-3A7C-82E6-A338A8909869}</Project>
+      <Name>test_opticalflow_only</Name>
     </ProjectReference>
     <ProjectReference Include="C:\Users\YeaDaddy\Documents\GitHub\OSFG_Development\build\test_simple_opticalflow.vcxproj">
       <Project>{9FB5A2DE-7C79-336C-AFAE-8EE9AD6FBECB}</Project>
